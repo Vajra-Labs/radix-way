@@ -1,4 +1,4 @@
-import {RadixTree} from '../ts';
+import {RadixTree} from '@/index';
 import {describe, it, expect} from 'vitest';
 
 describe('RadixTree', () => {

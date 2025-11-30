@@ -1,5 +1,4 @@
-import findMyWay, {HTTPMethod} from 'find-my-way';
-import {RadixTree} from './ts/index.ts';
+import {RadixTree} from './dist/index.cjs';
 
 const routes = [
   // Basic routes
@@ -70,13 +69,6 @@ const routes = [
   ['GET', '/admin/settings', 'admin-settings'],
   ['POST', '/admin/settings', 'admin-update-settings'],
 ];
-
-console.log('=== find-my-way ===');
-const fmw = findMyWay();
-routes.forEach(([method, path, handler]) =>
-  fmw.on(method as HTTPMethod, path, () => handler),
-);
-console.log(fmw.prettyPrint());
 
 console.log('\n=== RadixTree ===');
 const rt = new RadixTree();

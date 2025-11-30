@@ -1,24 +1,10 @@
 import assert from 'node:assert';
 import {prettyPrint} from './pretty';
 import {Result, Router} from './types';
-import {safeDecodeURI, safeDecodeURIComponent} from './utils';
 import {NODE_TYPES, StaticNode, WildcardNode, ParametricNode} from './node';
 
 const ESCAPE_REGEXP = /[.*+?^${}()|[\]\\]/g;
 const OPTIONAL_PARAM_REGEXP = /(\/:[^/()]*?)\?(\/?)/;
-const REMOVE_DUPLICATE_SLASHES_REGEXP = /\/\/+/g;
-
-const trimLastSlash = (path: string) => {
-  if (path.length > 1 && path.charCodeAt(path.length - 1) === 47) {
-    return path.slice(0, -1);
-  }
-  return path;
-};
-
-const removeDuplicateSlashes = (path: string) =>
-  path.indexOf('//') !== -1
-    ? path.replace(REMOVE_DUPLICATE_SLASHES_REGEXP, '/')
-    : path;
 
 const escapeRegExp = (str: string) => str.replace(ESCAPE_REGEXP, '\\$&');
 
@@ -50,21 +36,9 @@ const getClosingParenthesesPosition = (path: string, index: number): number => {
 };
 
 export class RadixTree<T> implements Router<T> {
-  #tree: StaticNode<T>;
-  #ignoreTrailingSlash = false;
-  #ignoreDuplicateSlashes = false;
-
-  constructor(opts?: {
-    ignoreTrailingSlash?: boolean;
-    ignoreDuplicateSlashes?: boolean;
-  }) {
-    this.#tree = new StaticNode('/');
-    this.#ignoreTrailingSlash = opts?.ignoreTrailingSlash ?? false;
-    this.#ignoreDuplicateSlashes = opts?.ignoreDuplicateSlashes ?? false;
-  }
+  #tree: StaticNode<T> = new StaticNode('/');
 
   add(method: string, path: string, handler: T): void {
-    // Validation
     assert(typeof path === 'string', 'Path should be a string');
     assert(path.length > 0, 'Path cannot be empty');
     assert(
@@ -83,28 +57,18 @@ export class RadixTree<T> implements Router<T> {
       this.add(method, optionalPath, handler);
       return;
     }
-    // Apply options
-    if (this.#ignoreDuplicateSlashes) {
-      path = removeDuplicateSlashes(path);
-    }
-    if (this.#ignoreTrailingSlash) {
-      path = trimLastSlash(path);
-    }
-    // Register Handler with map Method
-    void this.#on(method, path, handler);
+    void this.#insert(method, path, handler);
   }
 
-  #on(method: string, path: string, handler: T): void {
+  #insert(method: string, path: string, handler: T): void {
     let pattern = path;
     let currentNode: StaticNode<T> | ParametricNode<T> | WildcardNode<T> =
       this.#tree;
     let parentNodePathIndex = (currentNode as StaticNode<T>).prefix.length;
     const params: string[] = [];
-
     for (let i = 0; i <= pattern.length; i++) {
       const isParametricNode = pattern.charCodeAt(i) === 58; // :
       const isWildcardNode = pattern.charCodeAt(i) === 42; // *
-
       if (
         isParametricNode ||
         isWildcardNode ||
@@ -115,27 +79,21 @@ export class RadixTree<T> implements Router<T> {
           staticNodePath,
         );
       }
-
       if (isParametricNode) {
         let isRegexNode = false;
         let isParamSafe = true;
         let backtrack = '';
         const regexps: string[] = [];
-
         let lastParamStartIndex = i + 1;
         for (let j = lastParamStartIndex; ; j++) {
           const charCode = pattern.charCodeAt(j);
-
           const isRegexParam = charCode === 40; // (
           const isStaticPart = charCode === 45 || charCode === 46; // - or .
           const isEndOfNode = charCode === 47 || j === pattern.length; // / or end
-
           if (isRegexParam || isStaticPart || isEndOfNode) {
             const paramName = pattern.slice(lastParamStartIndex, j);
             params.push(paramName);
-
             isRegexNode = isRegexNode || isRegexParam || isStaticPart;
-
             if (isRegexParam) {
               const endOfRegexIndex = getClosingParenthesesPosition(pattern, j);
               const regexString = pattern.slice(j, endOfRegexIndex + 1);
@@ -148,21 +106,17 @@ export class RadixTree<T> implements Router<T> {
               );
               isParamSafe = false;
             }
-
             const staticPartStartIndex = j;
             for (; j < pattern.length; j++) {
               const charCode = pattern.charCodeAt(j);
               if (charCode === 47) break; // /
               if (charCode === 58) break; // :
             }
-
             let staticPart = pattern.slice(staticPartStartIndex, j);
             if (staticPart) {
               regexps.push((backtrack = escapeRegExp(staticPart)));
             }
-
             lastParamStartIndex = j + 1;
-
             if (
               isEndOfNode ||
               pattern.charCodeAt(j) === 47 ||
@@ -170,11 +124,9 @@ export class RadixTree<T> implements Router<T> {
             ) {
               const nodePattern = isRegexNode ? '()' + staticPart : staticPart;
               const nodePath = pattern.slice(i, j);
-
               pattern =
                 pattern.slice(0, i + 1) + nodePattern + pattern.slice(j);
               i += nodePattern.length;
-
               const regex = isRegexNode
                 ? new RegExp('^' + regexps.join('') + '$')
                 : null;
@@ -192,7 +144,6 @@ export class RadixTree<T> implements Router<T> {
         parentNodePathIndex = i + 1;
       }
     }
-
     const paramMap: Record<string, number> = Object.create(null);
     params.forEach((p, idx) => (paramMap[p] = idx));
     currentNode.addHandler(method, handler, paramMap);
@@ -200,47 +151,22 @@ export class RadixTree<T> implements Router<T> {
 
   match(method: string, path: string): Result<T> {
     let currentNode: any = this.#tree;
-
-    // Apply options
-    if (this.#ignoreDuplicateSlashes && path.indexOf('//') !== -1) {
-      path = path.replace(REMOVE_DUPLICATE_SLASHES_REGEXP, '/');
-    }
-    if (
-      this.#ignoreTrailingSlash &&
-      path.length > 1 &&
-      path.charCodeAt(path.length - 1) === 47
-    ) {
-      path = path.slice(0, -1);
-    }
-
-    // Skip safeDecodeURI for simple paths (no % encoding)
-    let shouldDecodeParam = false;
-    const hasEncoding = path.indexOf('%') !== -1;
-    if (hasEncoding) {
-      const sanitized = safeDecodeURI(path);
-      path = sanitized.path;
-      shouldDecodeParam = sanitized.shouldDecodeParam;
-    }
-
     const originPath = path;
     let pathIndex = currentNode.prefix.length;
     const params: string[] = [];
     const pathLen = path.length;
     const brothersNodesStack: any[] = [];
-
     while (true) {
       if (pathIndex === pathLen && currentNode.isLeafNode) {
         const handlers = currentNode.handlers.get(method);
         if (handlers) return [handlers, params];
       }
-
       let node = currentNode.getNextNode(
         path,
         pathIndex,
         brothersNodesStack,
         params.length,
       );
-
       if (node === null) {
         if (brothersNodesStack.length === 0) return [[], []];
         const brotherNodeState = brothersNodesStack.pop();
@@ -248,32 +174,20 @@ export class RadixTree<T> implements Router<T> {
         params.splice(brotherNodeState.paramsCount);
         node = brotherNodeState.brotherNode;
       }
-
       currentNode = node;
-
       if (currentNode.kind === NODE_TYPES.STATIC) {
         pathIndex += currentNode.prefix.length;
         continue;
       }
-
       if (currentNode.kind === NODE_TYPES.WILDCARD) {
         let param = originPath.slice(pathIndex);
-        if (shouldDecodeParam) {
-          param = safeDecodeURIComponent(param);
-        }
         params.push(param);
         pathIndex = pathLen;
         continue;
       }
-
       let paramEndIndex = originPath.indexOf('/', pathIndex);
       if (paramEndIndex === -1) paramEndIndex = pathLen;
-
       let param = originPath.slice(pathIndex, paramEndIndex);
-      if (shouldDecodeParam) {
-        param = safeDecodeURIComponent(param);
-      }
-
       if (currentNode.isRegex) {
         const matchedParameters = currentNode.regex.exec(param);
         if (matchedParameters === null) continue;
@@ -283,12 +197,9 @@ export class RadixTree<T> implements Router<T> {
       } else {
         params.push(param);
       }
-
       pathIndex = paramEndIndex;
     }
   }
 
-  prettyPrint(): string {
-    return prettyPrint(this.#tree);
-  }
+  prettyPrint = (): string => prettyPrint(this.#tree);
 }
