@@ -238,4 +238,8 @@ export class ParametricNode<T> extends ParentNode<T> {
 
 export class WildcardNode<T> extends Node<T> {
   kind: NodeType = NODE_TYPES.WILDCARD;
+
+  getNextNode() {
+    return null;
+  }
 }
