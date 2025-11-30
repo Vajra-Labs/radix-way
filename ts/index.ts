@@ -50,7 +50,7 @@ const getClosingParenthesesPosition = (path: string, index: number): number => {
 };
 
 export class RadixTree<T> implements Router<T> {
-  #trees: Map<string, StaticNode<T>> = new Map();
+  #tree: StaticNode<T>;
   #ignoreTrailingSlash = false;
   #ignoreDuplicateSlashes = false;
 
@@ -58,6 +58,7 @@ export class RadixTree<T> implements Router<T> {
     ignoreTrailingSlash?: boolean;
     ignoreDuplicateSlashes?: boolean;
   }) {
+    this.#tree = new StaticNode('/');
     this.#ignoreTrailingSlash = opts?.ignoreTrailingSlash ?? false;
     this.#ignoreDuplicateSlashes = opts?.ignoreDuplicateSlashes ?? false;
   }
@@ -94,12 +95,9 @@ export class RadixTree<T> implements Router<T> {
   }
 
   #on(method: string, path: string, handler: T): void {
-    if (!this.#trees.has(method)) {
-      this.#trees.set(method, new StaticNode('/'));
-    }
     let pattern = path;
     let currentNode: StaticNode<T> | ParametricNode<T> | WildcardNode<T> =
-      this.#trees.get(method)!;
+      this.#tree;
     let parentNodePathIndex = (currentNode as StaticNode<T>).prefix.length;
     const params: string[] = [];
 
@@ -201,8 +199,7 @@ export class RadixTree<T> implements Router<T> {
   }
 
   match(method: string, path: string): Result<T> {
-    let currentNode: any = this.#trees.get(method);
-    if (!currentNode) return [[], []];
+    let currentNode: any = this.#tree;
 
     // Apply options
     if (this.#ignoreDuplicateSlashes && path.indexOf('//') !== -1) {
@@ -291,15 +288,7 @@ export class RadixTree<T> implements Router<T> {
     }
   }
 
-  prettyPrint(method?: string): string {
-    if (!method) {
-      let result = '';
-      for (const [m, tree] of this.#trees) {
-        result += `\n\x1b[1m\x1b[36m${m}\x1b[0m${prettyPrint(tree, '', m)}`;
-      }
-      return result;
-    }
-    const tree = this.#trees.get(method);
-    return tree ? prettyPrint(tree, '', method) : '\x1b[90m(empty)\x1b[0m';
+  prettyPrint(): string {
+    return prettyPrint(this.#tree);
   }
 }

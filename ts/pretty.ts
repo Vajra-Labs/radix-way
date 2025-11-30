@@ -18,17 +18,26 @@ const methodColors: Record<string, string> = {
   PATCH: colors.cyan,
 };
 
-export function prettyPrint(node: any, prefix = '', method?: string): string {
+export function prettyPrint(node: any, prefix = '', isRoot = true): string {
   let result = '';
 
-  if (node.isLeafNode && node.handlers) {
+  // For root node, show handler if exists
+  if (isRoot && node.isLeafNode && node.handlers) {
     const methods = Array.from(node.handlers.keys()) as string[];
     const coloredMethods = methods
       .map(m => `${methodColors[m] || colors.cyan}${m}${colors.reset}`)
       .join(colors.gray + ', ' + colors.reset);
-    result += ` ${colors.gray}[${colors.reset}${coloredMethods}${colors.gray}]${colors.reset}\n`;
-  } else {
-    result += '\n';
+    result += `${colors.gray}[${colors.reset}${coloredMethods}${colors.gray}]${colors.reset}\n`;
+  } else if (!isRoot) {
+    if (node.isLeafNode && node.handlers) {
+      const methods = Array.from(node.handlers.keys()) as string[];
+      const coloredMethods = methods
+        .map(m => `${methodColors[m] || colors.cyan}${m}${colors.reset}`)
+        .join(colors.gray + ', ' + colors.reset);
+      result += ` ${colors.gray}[${colors.reset}${coloredMethods}${colors.gray}]${colors.reset}\n`;
+    } else {
+      result += '\n';
+    }
   }
 
   const children: [string, any, string][] = [];
@@ -54,7 +63,7 @@ export function prettyPrint(node: any, prefix = '', method?: string): string {
     const isLast = i === children.length - 1;
     const branch = isLast ? '└─ ' : '├─ ';
     const childPrefix = isLast ? '   ' : '│  ';
-    result += `${colors.gray}${prefix}${branch}${colors.reset}${color}${label}${colors.reset}${prettyPrint(child, prefix + childPrefix, method)}`;
+    result += `${colors.gray}${prefix}${branch}${colors.reset}${color}${label}${colors.reset}${prettyPrint(child, prefix + childPrefix, false)}`;
   });
 
   return result;
