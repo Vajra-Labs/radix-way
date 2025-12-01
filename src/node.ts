@@ -192,13 +192,30 @@ export class StaticNode<T> extends ParentNode<T> {
 
   compile(prefix: string) {
     const len = prefix.length;
-    if (len <= 1) return () => true;
+    if (len === 1) return () => true;
+
+    // For very short prefixes (2-3 chars), inline comparison is faster
+    if (len === 2) {
+      const code = prefix.charCodeAt(1);
+      return (path: string, idx: number) =>
+        path.length > idx + 1 && path.charCodeAt(idx + 1) === code;
+    }
+
+    if (len === 3) {
+      const c1 = prefix.charCodeAt(1);
+      const c2 = prefix.charCodeAt(2);
+      return (path: string, idx: number) =>
+        path.length > idx + 2 &&
+        path.charCodeAt(idx + 1) === c1 &&
+        path.charCodeAt(idx + 2) === c2;
+    }
+
+    // For longer prefixes, use your existing approach
     const codes = new Uint16Array(len - 1);
     for (let i = 1; i < len; i++) codes[i - 1] = prefix.charCodeAt(i);
 
     return function matchPrefix(path: string, idx: number) {
-      // idx is the position where prefix[0] already matched
-      const end = idx + codes.length + 1; // inclusive of first char
+      const end = idx + codes.length + 1;
       if (path.length < end) return false;
       for (let j = 0; j < codes.length; j++) {
         if (path.charCodeAt(idx + 1 + j) !== codes[j]) return false;
