@@ -1,9 +1,9 @@
-import {title, now, print, operations} from './utils.js';
-import koaTreeRouter from 'koa-tree-router';
+import findMyWay from 'find-my-way';
+import {title, now, print, operations} from '../utils.js';
 
-title('koa-tree-router benchmark');
+const router = findMyWay();
 
-const router = new koaTreeRouter();
+title('find-my-way benchmark');
 
 const routes = [
   {method: 'GET', url: '/user'},
@@ -17,53 +17,56 @@ const routes = [
   {method: 'GET', url: '/map/:location/events'},
   {method: 'GET', url: '/status'},
   {method: 'GET', url: '/very/deeply/nested/route/hello/there'},
-  {method: 'GET', url: '/static/*file'},
+  {method: 'GET', url: '/static/*'},
 ];
 
 function noop() {}
 
-routes.forEach(({method, url}) => {
-  router.on(method, url, noop);
+let i = 0;
+let time = 0;
+
+routes.forEach(route => {
+  router.on(route.method, route.url, noop);
 });
 
-let time = now();
-for (let i = 0; i < operations; i++) {
+time = now();
+for (i = 0; i < operations; i++) {
   router.find('GET', '/user');
 }
 print('short static:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.find('GET', '/user/comments');
 }
 print('static with same radix:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.find('GET', '/user/lookup/username/john');
 }
 print('dynamic route:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.find('GET', '/event/abcd1234/comments');
 }
 print('mixed static dynamic:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.find('GET', '/very/deeply/nested/route/hello/there');
 }
 print('long static:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.find('GET', '/static/index.html');
 }
 print('wildcard:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.find('GET', '/user');
   router.find('GET', '/user/comments');
   router.find('GET', '/user/lookup/username/john');

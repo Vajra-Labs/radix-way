@@ -1,9 +1,9 @@
-import {title, now, print, operations} from './utils.js';
-import {RadixTree} from '../dist/index.js';
-
-title('radix-tree benchmark');
+import {RadixTree} from '../../../dist/index.js';
+import {title, now, print, operations} from '../utils.js';
 
 const router = new RadixTree();
+
+title('radix-tree benchmark');
 
 const routes = [
   {method: 'GET', url: '/user'},
@@ -22,48 +22,51 @@ const routes = [
 
 function noop() {}
 
-routes.forEach(({method, url}) => {
-  router.add(method, url, noop);
+let i = 0;
+let time = 0;
+
+routes.forEach(route => {
+  router.add(route.method, route.url, noop);
 });
 
-let time = now();
-for (let i = 0; i < operations; i++) {
+time = now();
+for (i = 0; i < operations; i++) {
   router.match('GET', '/user');
 }
 print('short static:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.match('GET', '/user/comments');
 }
 print('static with same radix:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.match('GET', '/user/lookup/username/john');
 }
 print('dynamic route:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.match('GET', '/event/abcd1234/comments');
 }
 print('mixed static dynamic:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.match('GET', '/very/deeply/nested/route/hello/there');
 }
 print('long static:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.match('GET', '/static/index.html');
 }
 print('wildcard:', time);
 
 time = now();
-for (let i = 0; i < operations; i++) {
+for (i = 0; i < operations; i++) {
   router.match('GET', '/user');
   router.match('GET', '/user/comments');
   router.match('GET', '/user/lookup/username/john');

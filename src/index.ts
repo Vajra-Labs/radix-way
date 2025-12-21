@@ -1,1 +1,1 @@
-export * from './router';
+export {RadixTree} from './router';

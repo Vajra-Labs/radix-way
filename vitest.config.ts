@@ -1,6 +1,5 @@
 import swc from 'unplugin-swc';
 import {defineProject} from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineProject({
   test: {
@@ -10,7 +9,6 @@ export default defineProject({
     },
   },
   plugins: [
-    tsconfigPaths(),
     swc.vite({
       module: {type: 'es6'},
     }) as any,

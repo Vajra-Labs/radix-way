@@ -1,3 +1,5 @@
+import type {HandlerRecord, ParamIndexMap} from './types';
+
 export const NODE_TYPES = {
   STATIC: 0,
   PARAMETRIC: 1,
@@ -5,33 +7,28 @@ export const NODE_TYPES = {
 } as const;
 
 export type NodeType = (typeof NODE_TYPES)[keyof typeof NODE_TYPES];
-export type HandlerRecord<T> = [T, Record<string, number>];
 
 export class Node<T> {
-  handlers: Map<string, HandlerRecord<T>[]> | null = null;
+  handlers: Record<string, HandlerRecord<T>> | null = null;
   isLeafNode = false;
 
-  addHandler(method: string, handler: T, paramMap: Record<string, number>) {
-    if (this.handlers === null) this.handlers = new Map();
+  addHandler(method: string, handler: T, paramMap: ParamIndexMap) {
+    if (this.handlers === null) this.handlers = Object.create(null);
     this.isLeafNode = true;
-    let list = this.handlers.get(method);
-    if (!list) {
-      list = [];
-      this.handlers.set(method, list);
-    }
-    list.push([handler, paramMap]);
+    // Replace existing handler if it exists
+    this.handlers[method] = [handler, paramMap];
   }
 }
 
 export class ParentNode<T> extends Node<T> {
-  staticChildren: Map<string, StaticNode<T>> = new Map();
+  staticChildren: Record<string, StaticNode<T>> = Object.create(null);
 
   findStaticMatchingChild(
     path: string,
     pathIndex: number,
   ): StaticNode<T> | null {
     if (pathIndex >= path.length) return null;
-    const child = this.staticChildren.get(path[pathIndex]);
+    const child = this.staticChildren[path[pathIndex]];
     if (!child) return null;
     if (!child.matchPrefix(path, pathIndex)) return null;
     return child;
@@ -49,7 +46,7 @@ export class ParentNode<T> extends Node<T> {
     if (path.length === 0) return this as unknown as StaticNode<T>;
 
     const first = path[0];
-    let child = this.staticChildren.get(first);
+    let child = this.staticChildren[first];
     if (child) {
       let i = 1;
       const cl = child.prefix.length;
@@ -68,7 +65,7 @@ export class ParentNode<T> extends Node<T> {
     }
 
     const n = new StaticNode<T>(path);
-    this.staticChildren.set(first, n);
+    this.staticChildren[first] = n;
     return n;
   }
 }
@@ -145,8 +142,8 @@ export class StaticNode<T> extends ParentNode<T> {
     this.matchPrefix = this.compile(childPrefix);
 
     const staticNode = new StaticNode<T>(parentPrefix);
-    staticNode.staticChildren.set(childPrefix[0], this);
-    parent.staticChildren.set(parentPrefix[0], staticNode);
+    staticNode.staticChildren[childPrefix[0]] = this;
+    parent.staticChildren[parentPrefix[0]] = staticNode;
     return staticNode;
   }
 
@@ -194,7 +191,6 @@ export class StaticNode<T> extends ParentNode<T> {
     const len = prefix.length;
     if (len === 1) return () => true;
 
-    // For very short prefixes (2-3 chars), inline comparison is faster
     if (len === 2) {
       const code = prefix.charCodeAt(1);
       return (path: string, idx: number) =>
@@ -210,7 +206,6 @@ export class StaticNode<T> extends ParentNode<T> {
         path.charCodeAt(idx + 2) === c2;
     }
 
-    // For longer prefixes, use your existing approach
     const codes = new Uint16Array(len - 1);
     for (let i = 1; i < len; i++) codes[i - 1] = prefix.charCodeAt(i);
 

@@ -1,4 +1,4 @@
-import {RadixTree} from './dist/index.cjs';
+import {RadixTree} from './src/router';
 
 const routes = [
   // Basic routes
@@ -70,12 +70,9 @@ const routes = [
   ['POST', '/admin/settings', 'admin-update-settings'],
 ];
 
-console.log('\n=== RadixTree ===');
-const rt = new RadixTree();
+const rt = new RadixTree<string>();
 routes.forEach(([method, path, handler]) => rt.add(method, path, handler));
 console.log(rt.prettyPrint());
-
-console.log('\n=== Route Count ===');
 console.log(`Total routes: ${routes.length}`);
 console.log(`Unique paths: ${new Set(routes.map(r => r[1])).size}`);
 console.log(`Methods used: ${new Set(routes.map(r => r[0])).size}`);
