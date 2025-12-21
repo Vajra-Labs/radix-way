@@ -1,4 +1,4 @@
-# Radix Tree Router
+# radix-way
 
 A high-performance HTTP router using radix tree algorithm for Node.js and Bun.
 
@@ -11,10 +11,18 @@ A high-performance HTTP router using radix tree algorithm for Node.js and Bun.
 - 🔧 **TypeScript** - Full type safety
 - 🌲 **Radix Tree** - Single-tree architecture for optimal memory usage
 
+## Installation
+
+```bash
+npm install radix-way
+# or
+bun add radix-way
+```
+
 ## Quick Start
 
 ```typescript
-import {RadixTree} from 'radix-tree';
+import {RadixTree} from 'radix-way';
 
 const router = new RadixTree();
 
@@ -142,7 +150,7 @@ console.log(router.prettyPrint());
 
 ```typescript
 import {createServer} from 'http';
-import {RadixTree} from 'radix-tree';
+import {RadixTree} from 'radix-way';
 
 const router = new RadixTree<(req: any, res: any) => void>();
 
@@ -177,7 +185,7 @@ createServer((req, res) => {
 ### Bun
 
 ```typescript
-import {RadixTree} from 'radix-tree';
+import {RadixTree} from 'radix-way';
 
 const router = new RadixTree<(req: Request) => Response>();
 

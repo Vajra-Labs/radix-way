@@ -1,5 +1,5 @@
 {
-  "name": "radix-tree",
+  "name": "radix-way",
   "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.d.cjs",
