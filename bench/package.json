@@ -3,12 +3,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "bench": "bun run ./src/runner.js",
-    "stress": "bun run ./src/stress-test.js",
-    "memory": "bun --smol --expose-gc src/memory.js",
-    "node:bench": "node ./src/runner.js",
-    "node:stress": "node ./src/stress-test.js",
-    "node:memory": "node --expose-gc src/memory.js"
+    "bench": "node ./src/runner.js",
+    "memory": "node --expose-gc src/memory.js"
   },
   "devDependencies": {
     "@types/bun": "latest"

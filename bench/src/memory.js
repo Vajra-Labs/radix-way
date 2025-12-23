@@ -1,4 +1,4 @@
-import {RadixTree} from '../../dist/index.js';
+import {RadixTree} from '../../dist/router.js';
 import findMyWay from 'find-my-way';
 
 function getMemoryUsage() {

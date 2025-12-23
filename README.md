@@ -4,7 +4,7 @@ A high-performance HTTP router using radix tree algorithm for Node.js and Bun.
 
 ## Features
 
-- ⚡ **Fast** - 4-44% faster than find-my-way across all route types
+- ⚡ **Fast** - 41-118% faster than find-my-way across all route types
 - 🪶 **Lightweight** - Zero dependencies (only ansis for pretty print)
 - 🎯 **Flexible** - Static, dynamic, wildcard, and regex routes
 - 💾 **Memory Efficient** - 50-78% less memory than find-my-way at scale (500+ routes)
@@ -268,15 +268,22 @@ if (result) {
 
 Benchmarked against find-my-way (Node.js v20+):
 
+**Test Environment:**
+- **CPU:** Apple M4
+- **RAM:** 16 GB
+- **OS:** macOS 26.1 (Build 25B78)
+- **Node.js:** v24.11.1
+- **npm:** 11.6.2
+
 ### Speed Comparison
 
-| Route Type          | RadixTree   | find-my-way | Performance        |
-| ------------------- | ----------- | ----------- | ------------------ |
-| Short Static Routes | 51.7M ops/s | 49.7M ops/s | **+4% faster** ✅  |
-| Long Static Routes  | 15.6M ops/s | 10.8M ops/s | **+44% faster** ✅ |
-| Parametric Routes   | 10.2M ops/s | 8.3M ops/s  | **+22% faster** ✅ |
-| Wildcard Routes     | 19.6M ops/s | 13.7M ops/s | **+43% faster** ✅ |
-| Mixed Workload      | 2.6M ops/s  | 2.1M ops/s  | **+26% faster** ✅ |
+| Route Type          | RadixTree   | find-my-way | Performance         |
+| ------------------- | ----------- | ----------- | ------------------- |
+| Short Static Routes | 52.9M ops/s | 33.8M ops/s | **+57% faster** ✅  |
+| Long Static Routes  | 23.8M ops/s | 10.9M ops/s | **+118% faster** ✅ |
+| Parametric Routes   | 12.8M ops/s | 8.8M ops/s  | **+46% faster** ✅  |
+| Wildcard Routes     | 20.9M ops/s | 14.0M ops/s | **+50% faster** ✅  |
+| Mixed Workload      | 3.0M ops/s  | 2.1M ops/s  | **+41% faster** ✅  |
 
 **Why is RadixTree faster?**
 
@@ -293,28 +300,12 @@ Benchmarked against find-my-way (Node.js v20+):
 | find-my-way   | 2.97 MB     | 141 KB    |
 | **Savings**   | **82%**     | **53%**   |
 
-### Scalability (1000 routes)
-
-| Operation    | RadixTree    | find-my-way  | Difference      |
-| ------------ | ------------ | ------------ | --------------- |
-| First Route  | 11.05M ops/s | 13.01M ops/s | -15% (fmw wins) |
-| Middle Route | 11.76M ops/s | 9.51M ops/s  | **+24% faster** |
-| Last Route   | 11.49M ops/s | 9.83M ops/s  | **+17% faster** |
-
-**Why does RadixTree scale better?**
-
-- **Single tree architecture** - No tree duplication across HTTP methods
-- **Better prefix compression** - Shared prefixes stored once
-- **Lower memory footprint** - Less cache pollution, better cache hit rates
-- At 1000 routes, find-my-way wins on first route due to method-first direct lookup
-
 ### Run Benchmarks
 
 ```bash
 cd bench
 bun install
 bun run bench      # Speed benchmarks
-bun run stress     # Scalability tests
 bun run memory     # Memory profiling
 ```
 
@@ -338,9 +329,9 @@ bun run memory     # Memory profiling
 
 | Aspect                        | RadixTree (Single Tree) | find-my-way (Multi Tree) |
 | ----------------------------- | ----------------------- | ------------------------ |
-| Short static routes           | ✅ Faster (+4%)         | Slower                   |
-| Long/complex routes           | ✅ Faster (+44%)        | Slower                   |
-| Parametric routes             | ✅ Faster (+22%)        | Slower                   |
+| Short static routes           | ✅ Faster (+57%)        | Slower                   |
+| Long/complex routes           | ✅ Faster (+118%)       | Slower                   |
+| Parametric routes             | ✅ Faster (+46%)        | Slower                   |
 | Memory at scale (500+ routes) | ✅ 82% less RSS         | Higher                   |
 | CPU cache locality            | Good                    | Better (smaller trees)   |
 | Prefix sharing                | ✅ Excellent            | None (duplicated)        |

@@ -190,33 +190,13 @@ export class StaticNode<T> extends ParentNode<T> {
   compile(prefix: string) {
     const len = prefix.length;
     if (len === 1) return () => true;
-
-    if (len === 2) {
-      const code = prefix.charCodeAt(1);
-      return (path: string, idx: number) =>
-        path.length > idx + 1 && path.charCodeAt(idx + 1) === code;
+    // Generate inline comparisons
+    const lines: string[] = [];
+    for (let i = 1; i < len; i++) {
+      const charCode = prefix.charCodeAt(i);
+      lines.push(`path.charCodeAt(idx + ${i}) === ${charCode}`);
     }
-
-    if (len === 3) {
-      const c1 = prefix.charCodeAt(1);
-      const c2 = prefix.charCodeAt(2);
-      return (path: string, idx: number) =>
-        path.length > idx + 2 &&
-        path.charCodeAt(idx + 1) === c1 &&
-        path.charCodeAt(idx + 2) === c2;
-    }
-
-    const codes = new Uint16Array(len - 1);
-    for (let i = 1; i < len; i++) codes[i - 1] = prefix.charCodeAt(i);
-
-    return function matchPrefix(path: string, idx: number) {
-      const end = idx + codes.length + 1;
-      if (path.length < end) return false;
-      for (let j = 0; j < codes.length; j++) {
-        if (path.charCodeAt(idx + 1 + j) !== codes[j]) return false;
-      }
-      return true;
-    };
+    return new Function('path', 'idx', `return ${lines.join(' && ')}`) as any;
   }
 }
 
