@@ -4,7 +4,7 @@ A high-performance HTTP router using radix tree algorithm for Node.js and Bun.
 
 ## Features
 
-- ⚡ **Fast** - 41-118% faster than find-my-way across all route types
+- ⚡ **Fast** - 43-118% faster than find-my-way across all route types
 - 🪶 **Lightweight** - Zero dependencies (only ansis for pretty print)
 - 🎯 **Flexible** - Static, dynamic, wildcard, and regex routes
 - 💾 **Memory Efficient** - 50-78% less memory than find-my-way at scale (500+ routes)
@@ -95,22 +95,26 @@ Use `{regex}` syntax to add validation constraints to parameters:
 
 ```typescript
 // Basic patterns
-router.add('GET', '/users/:id{\\d+}', handler);           // Digits only
-router.add('GET', '/posts/:slug{[a-z-]+}', handler);      // Lowercase + hyphens
+router.add('GET', '/users/:id{\\d+}', handler); // Digits only
+router.add('GET', '/posts/:slug{[a-z-]+}', handler); // Lowercase + hyphens
 
 // Character classes
-router.add('GET', '/hex/:color{[0-9a-fA-F]+}', handler);  // Hexadecimal
+router.add('GET', '/hex/:color{[0-9a-fA-F]+}', handler); // Hexadecimal
 
 // Quantifiers
-router.add('GET', '/code/:id{[A-Z]{3}\\d{4}}', handler);  // ABC1234 format
-router.add('GET', '/slug/:name{[a-z]{3,10}}', handler);   // 3-10 chars
+router.add('GET', '/code/:id{[A-Z]{3}\\d{4}}', handler); // ABC1234 format
+router.add('GET', '/slug/:name{[a-z]{3,10}}', handler); // 3-10 chars
 
 // Alternation (OR)
 router.add('GET', '/media/:type{image|video|audio}', handler);
 router.add('GET', '/file.:ext{jpg|png|gif}', handler);
 
 // Groups (non-capturing)
-router.add('GET', '/date/:d{\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])}', handler);
+router.add(
+  'GET',
+  '/date/:d{\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])}',
+  handler,
+);
 
 // Real-world patterns
 router.add('GET', '/user/:email{[\\w.+-]+@[\\w.-]+\\.\\w+}', handler);
@@ -269,6 +273,7 @@ if (result) {
 Benchmarked against find-my-way (Node.js v20+):
 
 **Test Environment:**
+
 - **CPU:** Apple M4
 - **RAM:** 16 GB
 - **OS:** macOS 26.1 (Build 25B78)
@@ -283,13 +288,14 @@ Benchmarked against find-my-way (Node.js v20+):
 | Long Static Routes  | 23.8M ops/s | 10.9M ops/s | **+118% faster** ✅ |
 | Parametric Routes   | 12.8M ops/s | 8.8M ops/s  | **+46% faster** ✅  |
 | Wildcard Routes     | 20.9M ops/s | 14.0M ops/s | **+50% faster** ✅  |
-| Mixed Workload      | 3.0M ops/s  | 2.1M ops/s  | **+41% faster** ✅  |
+| Mixed Workload      | 3.0M ops/s  | 2.1M ops/s  | **+43% faster** ✅  |
 
 **Why is RadixTree faster?**
 
 - **Single-tree architecture** - Path-first approach with methods at leaf nodes
 - **Better prefix compression** - Shared prefixes stored once across all HTTP methods
-- **Optimized inline comparisons** - Short static prefixes use specialized fast paths
+- **Dynamic code generation** - Uses `new Function()` to create optimized inline comparisons with zero loop overhead
+- **JIT-friendly** - Generated code is highly optimizable by JavaScript engines (V8/JavaScriptCore)
 - **Lower overhead** - No regex validation or parameter length checks in hot paths
 
 ### Memory Usage (500 routes)
@@ -333,7 +339,7 @@ bun run memory     # Memory profiling
 | Long/complex routes           | ✅ Faster (+118%)       | Slower                   |
 | Parametric routes             | ✅ Faster (+46%)        | Slower                   |
 | Memory at scale (500+ routes) | ✅ 82% less RSS         | Higher                   |
-| CPU cache locality            | Good                    | Better (smaller trees)   |
+| CPU cache locality            | ✅ Excellent            | Good                     |
 | Prefix sharing                | ✅ Excellent            | None (duplicated)        |
 
 **Choose RadixTree when:**
@@ -354,10 +360,11 @@ bun run memory     # Memory profiling
 The router uses a **radix tree** (compressed trie) data structure:
 
 1. **Static segments** are stored in tree nodes with `Object.create(null)` for zero overhead
-2. **Dynamic parameters** (`:param`) are handled with parametric nodes
-3. **Wildcards** (`*`) match remaining path segments
-4. **Backtracking** allows multiple route patterns to coexist
-5. **Single tree** stores all methods, reducing memory duplication
+2. **Prefix matching** uses dynamically generated code (`new Function()`) for optimal performance
+3. **Dynamic parameters** (`:param`) are handled with parametric nodes
+4. **Wildcards** (`*`) match remaining path segments
+5. **Backtracking** allows multiple route patterns to coexist
+6. **Single tree** stores all methods, reducing memory duplication
 
 Example tree for routes:
 
@@ -385,10 +392,18 @@ Use regex patterns with `{}` syntax to validate parameters:
 router.add('GET', '/users/:id{\\d+}', handler);
 
 // Match email addresses
-router.add('GET', '/user/:email{[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}}', emailHandler);
+router.add(
+  'GET',
+  '/user/:email{[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}}',
+  emailHandler,
+);
 
 // UUID pattern
-router.add('GET', '/resource/:uuid{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}', uuidHandler);
+router.add(
+  'GET',
+  '/resource/:uuid{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}',
+  uuidHandler,
+);
 
 // Hex color pattern
 router.add('GET', '/color/:hex{#[0-9a-fA-F]{6}}', colorHandler);
@@ -493,7 +508,11 @@ console.log(r2); // [handler, {id: 0}, ['123']]
 
 ```typescript
 // Date pattern (YYYY-MM-DD)
-router.add('GET', '/date/:year{\\d{4}}-:month{\\d{2}}-:day{\\d{2}}', dateHandler);
+router.add(
+  'GET',
+  '/date/:year{\\d{4}}-:month{\\d{2}}-:day{\\d{2}}',
+  dateHandler,
+);
 router.match('GET', '/date/2024-12-25'); // ✅ matches
 
 // Semantic version (X.Y.Z)
@@ -535,13 +554,14 @@ Output:
 
 While both routers use radix trees, there are key architectural differences:
 
-| Feature              | RadixTree                     | find-my-way                       |
-| -------------------- | ----------------------------- | --------------------------------- |
-| Tree Structure       | Single tree (path-first)      | Multiple trees (method-first)     |
-| Memory at 500 routes | 66 KB heap (0.53 MB RSS)      | 141 KB heap (2.97 MB RSS)         |
-| Performance          | 4-44% faster across all types | Baseline                          |
-| Best For             | All applications              | Advanced routing features         |
-| Route Registration   | Single handler per route      | Supports constraints & versioning |
+| Feature              | RadixTree                       | find-my-way                       |
+| -------------------- | ------------------------------- | --------------------------------- |
+| Tree Structure       | Single tree (path-first)        | Multiple trees (method-first)     |
+| Memory at 500 routes | 66 KB heap (0.53 MB RSS)        | 141 KB heap (2.97 MB RSS)         |
+| Performance          | 43-118% faster across all types | Baseline                          |
+| Optimization         | Dynamic code generation         | Loop-based matching               |
+| Best For             | All applications                | Advanced routing features         |
+| Route Registration   | Single handler per route        | Supports constraints & versioning |
 
 **Migration from find-my-way:**
 
