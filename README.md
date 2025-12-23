@@ -73,7 +73,10 @@ const result = router.match('GET', '/static/css/style.css');
 
 ```typescript
 // Match only numeric IDs
-router.add('GET', '/users/:id(\\d+)', handler);
+router.add('GET', '/users/:id{\\d+}', handler);
+
+// Match slug pattern
+router.add('GET', '/posts/:slug{[a-z0-9-]+}', handler);
 
 // Match with static suffix
 router.add('GET', '/files/:name.jpg', handler);
@@ -85,6 +88,44 @@ router.add('GET', '/files/:name.jpg', handler);
 router.add('GET', '/posts/:id?', handler);
 // Matches both /posts and /posts/123
 ```
+
+### Regex Pattern Syntax
+
+Use `{regex}` syntax to add validation constraints to parameters:
+
+```typescript
+// Basic patterns
+router.add('GET', '/users/:id{\\d+}', handler);           // Digits only
+router.add('GET', '/posts/:slug{[a-z-]+}', handler);      // Lowercase + hyphens
+
+// Character classes
+router.add('GET', '/hex/:color{[0-9a-fA-F]+}', handler);  // Hexadecimal
+
+// Quantifiers
+router.add('GET', '/code/:id{[A-Z]{3}\\d{4}}', handler);  // ABC1234 format
+router.add('GET', '/slug/:name{[a-z]{3,10}}', handler);   // 3-10 chars
+
+// Alternation (OR)
+router.add('GET', '/media/:type{image|video|audio}', handler);
+router.add('GET', '/file.:ext{jpg|png|gif}', handler);
+
+// Groups (non-capturing)
+router.add('GET', '/date/:d{\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])}', handler);
+
+// Real-world patterns
+router.add('GET', '/user/:email{[\\w.+-]+@[\\w.-]+\\.\\w+}', handler);
+router.add('GET', '/post/:slug{[a-z0-9]+(?:-[a-z0-9]+)*}', handler);
+
+// Multiple regex params
+router.add('GET', '/api/v:version{\\d+}/users/:id{\\d+}', handler);
+```
+
+**Important Notes:**
+
+- Use `\\` for escaping (JavaScript string escaping required)
+- Regex is applied to the parameter value only, not the full path
+- Use non-capturing groups `(?:...)` for grouping without capture
+- The router automatically wraps your pattern in a capturing group
 
 ## API
 
@@ -346,19 +387,33 @@ Example tree for routes:
 
 ### Route Constraints
 
-Use regex patterns to validate parameters:
+Use regex patterns with `{}` syntax to validate parameters:
 
 ```typescript
 // Only match numeric IDs
-router.add('GET', '/users/:id(\\d+)', handler);
+router.add('GET', '/users/:id{\\d+}', handler);
 
-// Only match specific formats
-router.add('GET', '/files/:name(.+\\.pdf)', pdfHandler);
+// Match email addresses
+router.add('GET', '/user/:email{[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}}', emailHandler);
+
+// UUID pattern
+router.add('GET', '/resource/:uuid{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}', uuidHandler);
+
+// Hex color pattern
+router.add('GET', '/color/:hex{#[0-9a-fA-F]{6}}', colorHandler);
 
 // Won't match - returns null
-router.match('GET', '/users/abc'); // null
-router.match('GET', '/files/doc.txt'); // null
+router.match('GET', '/users/abc'); // null (not numeric)
+router.match('GET', '/user/invalid'); // null (not email)
+router.match('GET', '/color/#GGGGGG'); // null (invalid hex)
 ```
+
+**Why use `{}` instead of `()`?**
+
+- Clearer syntax separation between router syntax `{}` and regex content
+- No ambiguity with regex capturing groups
+- Simpler parsing and better error messages
+- Compatible with Hono-style routing patterns
 
 ### Multi-Parameter Routes
 
@@ -432,7 +487,7 @@ Routes with regex patterns only match valid formats:
 
 ```typescript
 const router = new RadixTree();
-router.add('GET', '/users/:id(\\d+)', handler);
+router.add('GET', '/users/:id{\\d+}', handler);
 
 // Invalid format - returns null
 const r1 = router.match('GET', '/users/abc');
@@ -441,6 +496,27 @@ console.log(r1); // null
 // Valid - returns handler
 const r2 = router.match('GET', '/users/123');
 console.log(r2); // [handler, {id: 0}, ['123']]
+```
+
+### Complex Pattern Examples
+
+```typescript
+// Date pattern (YYYY-MM-DD)
+router.add('GET', '/date/:year{\\d{4}}-:month{\\d{2}}-:day{\\d{2}}', dateHandler);
+router.match('GET', '/date/2024-12-25'); // ✅ matches
+
+// Semantic version (X.Y.Z)
+router.add('GET', '/version/:semver{\\d+\\.\\d+\\.\\d+}', versionHandler);
+router.match('GET', '/version/1.2.3'); // ✅ matches
+
+// IP address
+router.add('GET', '/ip/:addr{(?:\\d{1,3}\\.){3}\\d{1,3}}', ipHandler);
+router.match('GET', '/ip/192.168.1.1'); // ✅ matches
+
+// File extension with alternation
+router.add('GET', '/file/:name.:ext{json|xml|txt}', fileHandler);
+router.match('GET', '/file/config.json'); // ✅ matches
+router.match('GET', '/file/data.pdf'); // ❌ null
 ```
 
 ## Debugging

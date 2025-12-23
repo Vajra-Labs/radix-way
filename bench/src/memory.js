@@ -78,7 +78,7 @@ function createRoutes(router, count, isRadixTree) {
     }
     // Regex routes
     else if (i % 5 === 3) {
-      const path = `/posts-${i}/:id(\\d+)`;
+      const path = `/posts-${i}/:id{\\d+}`;
       if (isRadixTree) {
         router.add(method, path, () => {});
       } else {

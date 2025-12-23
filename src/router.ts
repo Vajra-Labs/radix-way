@@ -3,12 +3,21 @@ import {
   prettyPrint,
   escapeRegExp,
   trimRegExpStartAndEnd,
-  getClosingParenthesesPosition,
+  getClosingBracePosition,
 } from './utils';
 import type {Result} from './types';
 import {NODE_TYPES, StaticNode, WildcardNode, ParametricNode} from './node';
 
-const OPTIONAL_PARAM_REGEXP = /(\/:[^/()]*?)\?(\/?)/;
+const OPTIONAL_PARAM_REGEXP = /(\/:[^/{}]*?)\?(\/?)/;
+
+// Regex cache for performance optimization
+const REGEX_CACHE: Record<string, RegExp> = Object.create(null);
+const getCachedRegex = (pattern: string): RegExp => {
+  if (!REGEX_CACHE[pattern]) {
+    REGEX_CACHE[pattern] = new RegExp('^' + pattern + '$');
+  }
+  return REGEX_CACHE[pattern];
+};
 
 export class RadixTree<T> {
   #tree: StaticNode<T> = new StaticNode('/');
@@ -60,7 +69,7 @@ export class RadixTree<T> {
         let lastParamStartIndex = i + 1;
         for (let j = lastParamStartIndex; ; j++) {
           const charCode = pattern.charCodeAt(j);
-          const isRegexParam = charCode === 40; // (
+          const isRegexParam = charCode === 123; // {
           const isStaticPart = charCode === 45 || charCode === 46; // - or .
           const isEndOfNode = charCode === 47 || j === pattern.length; // / or end
           if (isRegexParam || isStaticPart || isEndOfNode) {
@@ -68,9 +77,9 @@ export class RadixTree<T> {
             params.push(paramName);
             isRegexNode = isRegexNode || isRegexParam || isStaticPart;
             if (isRegexParam) {
-              const endOfRegexIndex = getClosingParenthesesPosition(pattern, j);
-              const regexString = pattern.slice(j, endOfRegexIndex + 1);
-              regexps.push(trimRegExpStartAndEnd(regexString));
+              const endOfRegexIndex = getClosingBracePosition(pattern, j);
+              const regexString = pattern.slice(j + 1, endOfRegexIndex);
+              regexps.push('(' + trimRegExpStartAndEnd(regexString) + ')');
               j = endOfRegexIndex + 1;
               isParamSafe = true;
             } else {
@@ -101,7 +110,7 @@ export class RadixTree<T> {
                 pattern.slice(0, i + 1) + nodePattern + pattern.slice(j);
               i += nodePattern.length;
               const regex = isRegexNode
-                ? new RegExp('^' + regexps.join('') + '$')
+                ? getCachedRegex(regexps.join(''))
                 : null;
               currentNode = (
                 currentNode as StaticNode<T>
@@ -185,7 +194,21 @@ export class RadixTree<T> {
   }
 
   /**
-   * Pretty prints the router structure for debugging.
+   * Pretty-prints the internal tree structure.
+   *
+   * If `print` is `true`, the output is logged to the console and nothing is returned.
+   * If `print` is `false` or omitted, the pretty-printed string is returned.
+   *
+   * @param print - Whether to print the output to the console instead of returning it.
    */
-  prettyPrint = (): string => prettyPrint(this.#tree);
+  prettyPrint(print: true): void;
+  prettyPrint(print?: false): string;
+  prettyPrint(print?: boolean): void | string {
+    const str = prettyPrint(this.#tree);
+    if (print) {
+      console.log(str);
+      return;
+    }
+    return str;
+  }
 }

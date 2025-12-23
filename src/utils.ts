@@ -81,7 +81,7 @@ export const trimRegExpStartAndEnd = (regexString: string) => {
   }
   return regexString;
 };
-export const getClosingParenthesesPosition = (
+export const getClosingBracePosition = (
   path: string,
   index: number,
 ): number => {
@@ -92,8 +92,8 @@ export const getClosingParenthesesPosition = (
       index++;
       continue;
     }
-    if (path[index] === ')') stack--;
-    if (path[index] === '(') stack++;
+    if (path[index] === '}') stack--;
+    if (path[index] === '{') stack++;
     if (stack === 0) return index;
   }
   throw new TypeError(`Invalid regex in "${path}"`);
