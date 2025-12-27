@@ -1,4 +1,4 @@
-import type {HandlerRecord, ParamIndexMap} from './types';
+import type {ParamIndexMap, HandlerSet, HTTPMethod} from './types';
 
 export const NODE_TYPES = {
   STATIC: 0,
@@ -9,13 +9,12 @@ export const NODE_TYPES = {
 export type NodeType = (typeof NODE_TYPES)[keyof typeof NODE_TYPES];
 
 export class Node<T> {
-  handlers: Record<string, HandlerRecord<T>> | null = null;
+  handlers: Record<string, HandlerSet<T>> | null = null;
   isLeafNode = false;
 
-  addHandler(method: string, handler: T, paramMap: ParamIndexMap) {
+  addHandler(method: HTTPMethod, handler: T, paramMap: ParamIndexMap): void {
     if (this.handlers === null) this.handlers = Object.create(null);
     this.isLeafNode = true;
-    // Replace existing handler if it exists
     this.handlers[method] = [handler, paramMap];
   }
 }

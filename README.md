@@ -5,7 +5,7 @@ A high-performance HTTP router using radix tree algorithm for Node.js and Bun.
 ## Features
 
 - ⚡ **Fast** - 43-118% faster than find-my-way across all route types
-- 🪶 **Lightweight** - Zero dependencies (only ansis for pretty print)
+- 🪶 **Lightweight** - Zero dependencies
 - 🎯 **Flexible** - Static, dynamic, wildcard, and regex routes
 - 💾 **Memory Efficient** - 50-78% less memory than find-my-way at scale (500+ routes)
 - 🔧 **TypeScript** - Full type safety
@@ -181,12 +181,21 @@ if (result) {
 }
 ```
 
-### `prettyPrint(): string`
+### `printTree(print?: boolean): void | string`
 
 Print the router tree structure for debugging.
 
+**Parameters:**
+- `print` - When `true` (default), logs to console and returns `void`. When `false`, returns the string representation.
+
 ```typescript
-console.log(router.prettyPrint());
+// Print to console (default)
+router.printTree();
+router.printTree(true);
+
+// Get as string
+const treeStr = router.printTree(false);
+console.log(treeStr);
 ```
 
 ## Usage with HTTP Server
@@ -534,7 +543,12 @@ router.match('GET', '/file/data.pdf'); // ❌ null
 Print the router tree:
 
 ```typescript
-console.log(router.prettyPrint());
+// Print to console
+router.printTree();
+
+// Or get as string
+const tree = router.printTree(false);
+console.log(tree);
 ```
 
 Output:

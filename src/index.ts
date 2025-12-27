@@ -5,35 +5,30 @@ import {
   trimRegExpStartAndEnd,
   getClosingBracePosition,
 } from './utils';
-import type {Result} from './types';
-import {NODE_TYPES, StaticNode, WildcardNode, ParametricNode} from './node';
+import {METHOD_NAME_ALL} from './types';
+import {NODE_TYPES, StaticNode} from './node';
+import type {Result, Router, HTTPMethod} from './types';
+import type {WildcardNode, ParametricNode} from './node';
 
 const OPTIONAL_PARAM_REGEXP = /(\/:[^/{}]*?)\?(\/?)/;
 
 // Regex cache for performance optimization
 const REGEX_CACHE: Record<string, RegExp> = Object.create(null);
-const getCachedRegex = (pattern: string): RegExp => {
+export const getCachedRegex = (pattern: string): RegExp => {
   if (!REGEX_CACHE[pattern]) {
     REGEX_CACHE[pattern] = new RegExp('^' + pattern + '$');
   }
   return REGEX_CACHE[pattern];
 };
 
-export class RadixTree<T> {
-  #tree: StaticNode<T> = new StaticNode('/');
+export class RadixTree<T> implements Router<T> {
+  #tree: StaticNode<T> = new StaticNode<T>('/');
 
-  /**
-   * Adds a route to the router.
-   *
-   * @param method - The HTTP method (e.g., 'GET', 'POST').
-   * @param path - The path for the route.
-   * @param handler - The handler for the route.
-   */
-  add(method: string, path: string, handler: T): void {
+  add(method: HTTPMethod, path: string, handler: T): void {
     const optional = path.match(OPTIONAL_PARAM_REGEXP);
     if (optional) {
       assert(
-        path.length === optional.index! + optional[0].length,
+        path.length === optional.index + optional[0].length,
         'Optional parameter must be last in path',
       );
       const fullPath = path.replace(OPTIONAL_PARAM_REGEXP, '$1$2');
@@ -67,15 +62,18 @@ export class RadixTree<T> {
         let backtrack = '';
         const regexps: string[] = [];
         let lastParamStartIndex = i + 1;
+
         for (let j = lastParamStartIndex; ; j++) {
           const charCode = pattern.charCodeAt(j);
           const isRegexParam = charCode === 123; // {
           const isStaticPart = charCode === 45 || charCode === 46; // - or .
           const isEndOfNode = charCode === 47 || j === pattern.length; // / or end
+
           if (isRegexParam || isStaticPart || isEndOfNode) {
             const paramName = pattern.slice(lastParamStartIndex, j);
             params.push(paramName);
             isRegexNode = isRegexNode || isRegexParam || isStaticPart;
+
             if (isRegexParam) {
               const endOfRegexIndex = getClosingBracePosition(pattern, j);
               const regexString = pattern.slice(j + 1, endOfRegexIndex);
@@ -89,12 +87,14 @@ export class RadixTree<T> {
               isParamSafe = false;
             }
             const staticPartStartIndex = j;
+
             for (; j < pattern.length; j++) {
               const charCode = pattern.charCodeAt(j);
               if (charCode === 47) break; // /
               if (charCode === 58) break; // :
             }
             const staticPart = pattern.slice(staticPartStartIndex, j);
+
             if (staticPart) {
               regexps.push((backtrack = escapeRegExp(staticPart)));
             }
@@ -126,37 +126,33 @@ export class RadixTree<T> {
         parentNodePathIndex = i + 1;
       }
     }
-    const paramMap: Record<string, number> = Object.create(null);
+    const paramMap = Object.create(null);
     params.forEach((p, idx) => (paramMap[p] = idx));
     currentNode.addHandler(method, handler, paramMap);
   }
 
-  /**
-   * Matches a route based on the given method and path.
-   *
-   * @param method - The HTTP method (e.g., 'get', 'post').
-   * @param path - The path to match.
-   * @returns The result of the match.
-   */
-  match(method: string, path: string): Result<T> {
-    let currentNode: any = this.#tree;
+  match(method: HTTPMethod, path: string): Result<T> {
+    let curNode: any = this.#tree;
     const originPath = path;
-    let pathIndex = currentNode.prefix.length;
+    let pathIndex = curNode.prefix.length;
+
     const params: string[] = [];
     const pathLen = path.length;
     const brothersNodesStack: any[] = [];
+
     while (true) {
-      if (pathIndex === pathLen && currentNode.isLeafNode) {
+      if (pathIndex === pathLen && curNode.isLeafNode) {
         const record =
-          currentNode.handlers[method] || currentNode.handlers['ALL'];
+          curNode.handlers[method] || curNode.handlers[METHOD_NAME_ALL];
         if (record) return [record[0], record[1], params];
       }
-      let node = currentNode.getNextNode(
+      let node = curNode.getNextNode(
         path,
         pathIndex,
         brothersNodesStack,
         params.length,
       );
+
       if (node === null) {
         if (brothersNodesStack.length === 0) return null;
         const brotherNodeState = brothersNodesStack.pop();
@@ -164,23 +160,26 @@ export class RadixTree<T> {
         params.splice(brotherNodeState.paramsCount);
         node = brotherNodeState.brotherNode;
       }
-      currentNode = node;
-      if (currentNode.kind === NODE_TYPES.STATIC) {
-        pathIndex += currentNode.prefix.length;
+
+      curNode = node;
+      if (curNode.kind === NODE_TYPES.STATIC) {
+        pathIndex += curNode.prefix.length;
         continue;
       }
-      if (currentNode.kind === NODE_TYPES.WILDCARD) {
+
+      if (curNode.kind === NODE_TYPES.WILDCARD) {
         const param = originPath.slice(pathIndex);
         params.push(param);
         pathIndex = pathLen;
         continue;
       }
+
       let paramEndIndex = originPath.indexOf('/', pathIndex);
       if (paramEndIndex === -1) paramEndIndex = pathLen;
       const param = originPath.slice(pathIndex, paramEndIndex);
 
-      if (currentNode.isRegex) {
-        const matchedParameters = currentNode.regex.exec(param);
+      if (curNode.isRegex) {
+        const matchedParameters = curNode.regex.exec(param);
         if (matchedParameters === null) continue;
         for (let i = 1; i < matchedParameters.length; i++) {
           const matchedParam = matchedParameters[i];
@@ -193,17 +192,9 @@ export class RadixTree<T> {
     }
   }
 
-  /**
-   * Pretty-prints the internal tree structure.
-   *
-   * If `print` is `true`, the output is logged to the console and nothing is returned.
-   * If `print` is `false` or omitted, the pretty-printed string is returned.
-   *
-   * @param print - Whether to print the output to the console instead of returning it.
-   */
-  prettyPrint(print: true): void;
-  prettyPrint(print?: false): string;
-  prettyPrint(print?: boolean): void | string {
+  printTree(print: true): void;
+  printTree(print?: false): string;
+  printTree(print: boolean = true): void | string {
     const str = prettyPrint(this.#tree);
     if (print) {
       console.log(str);

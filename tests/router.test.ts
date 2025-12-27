@@ -1,4 +1,4 @@
-import {RadixTree} from '../src/router';
+import {RadixTree} from '../src/index';
 import {describe, it, expect, beforeEach} from 'vitest';
 
 describe('RadixTree', () => {

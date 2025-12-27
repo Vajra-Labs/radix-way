@@ -1,13 +1,4 @@
 import type {StaticNode} from './node';
-import ansis, {type Ansis} from 'ansis';
-
-const methodColors: Record<string, Ansis> = {
-  GET: ansis.green,
-  POST: ansis.blue,
-  PUT: ansis.yellow,
-  DELETE: ansis.magenta,
-  PATCH: ansis.cyan,
-};
 
 export const prettyPrint = <T>(
   node: StaticNode<T>,
@@ -16,60 +7,59 @@ export const prettyPrint = <T>(
 ): string => {
   let result = '';
 
-  const formatMethods = (methods: string[]) =>
-    methods.map(m => (methodColors[m] ?? ansis.cyan)(m)).join(ansis.gray(', '));
+  const formatMethods = (methods: string[]) => methods.join(', ');
 
   // Root node
-  if (isRoot && node.isLeafNode && node.handlers) {
-    const methods = Object.keys(node.handlers);
-    result += ansis.gray('[') + formatMethods(methods) + ansis.gray(']') + '\n';
+  if (isRoot) {
+    result += node.prefix || 'root';
+    if (node.isLeafNode && node.handlers) {
+      const methods = Object.keys(node.handlers);
+      result += ' [' + formatMethods(methods) + ']';
+    }
+    result += '\n';
   } else if (!isRoot) {
     if (node.isLeafNode && node.handlers) {
       const methods = Object.keys(node.handlers);
-      result +=
-        ' ' + ansis.gray('[') + formatMethods(methods) + ansis.gray(']') + '\n';
+      result += ' [' + formatMethods(methods) + ']\n';
     } else {
       result += '\n';
     }
   }
 
-  const children: [string, any, (s: string) => string][] = [];
+  const children: [string, any][] = [];
 
   if (node.staticChildren) {
     for (const child of Object.values(node.staticChildren)) {
-      children.push([child.prefix, child, ansis.dim]);
+      children.push([child.prefix, child]);
     }
   }
 
   if (node.parametricChildren) {
     for (const child of node.parametricChildren) {
-      const label = Array.from(child.nodePaths).join(
-        ansis.gray('|') + ansis.yellow(''),
-      );
-      children.push([label, child, ansis.yellow]);
+      const label = Array.from(child.nodePaths).join('|');
+      children.push([label, child]);
     }
   }
 
   if (node.wildcardChild) {
-    children.push(['*', node.wildcardChild, ansis.magenta]);
+    children.push(['*', node.wildcardChild]);
   }
 
-  children.forEach(([label, child, color], i) => {
+  children.forEach(([label, child], i) => {
     const isLast = i === children.length - 1;
     const branch = isLast ? '└─ ' : '├─ ';
     const childPrefix = isLast ? '   ' : '│  ';
 
     result +=
-      ansis.gray(prefix + branch) +
-      color(label) +
-      prettyPrint(child, prefix + childPrefix, false);
+      prefix + branch + label + prettyPrint(child, prefix + childPrefix, false);
   });
 
   return result;
 };
 
-const ESCAPE_REGEXP = /[.*+?^${}()|[\]\\]/g;
-export const escapeRegExp = (str: string) => str.replace(ESCAPE_REGEXP, '\\$&');
+export const escapeRegExp = (str: string) =>
+  str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const trimRegExpStartAndEnd = (regexString: string) => {
   if (regexString.charCodeAt(1) === 94) {
     // ^
@@ -81,6 +71,7 @@ export const trimRegExpStartAndEnd = (regexString: string) => {
   }
   return regexString;
 };
+
 export const getClosingBracePosition = (
   path: string,
   index: number,

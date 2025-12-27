@@ -1,10 +1,10 @@
 {
   "name": "radix-way",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "type": "module",
-  "main": "./dist/router.cjs",
-  "module": "./dist/router.js",
-  "types": "./dist/router.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -12,14 +12,33 @@
     "build": "bun remove-dist && bun run build.ts",
     "lint": "eslint \"./{src,tests}/**/*.{ts,js}\" --fix",
     "test": "vitest run",
+    "demo": "bun run demo.ts",
     "format": "prettier --write \"./{src,tests}/**/*.{ts,js}\"",
     "release": "bun run build && npm publish",
     "check-types": "tsc --noEmit",
     "coverage": "vitest --run --coverage",
-    "remove-dist": "rm -rf dist"
+    "remove-dist": "rm -rf dist",
+    "bench": "cd bench && bun run bench",
+    "memory": "cd bench && bun run memory"
   },
-  "dependencies": {
-    "ansis": "^4.2.0"
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
+      "require": "./dist/types.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "types": [
+        "./dist/types.d.ts"
+      ]
+    }
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -34,7 +53,7 @@
     "rimraf": "^6.1.2",
     "tsdown": "^0.15.12",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.50.0",
+    "typescript-eslint": "^8.50.1",
     "unplugin-swc": "^1.5.9",
     "unplugin-unused": "^0.5.6",
     "vitest": "^4.0.16"

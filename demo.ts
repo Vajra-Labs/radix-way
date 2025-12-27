@@ -1,8 +1,8 @@
-import {RadixTree} from './src/router';
+import {RadixTree} from './src/index';
 
 const routes = [
   // Basic routes
-  ['POST', '/', 'home'],
+  ['GET', '/home', 'home'],
   ['GET', '/about', 'about'],
   ['GET', '/contact', 'contact'],
 
@@ -85,7 +85,7 @@ const rt = new RadixTree<string>();
 routes.forEach(([method, path, handler]) => rt.add(method, path, handler));
 
 console.log('🌲 Router Tree Structure:\n');
-rt.prettyPrint(true);
+rt.printTree();
 
 console.log('\n📊 Router Statistics:');
 console.log(`  Total routes: ${routes.length}`);

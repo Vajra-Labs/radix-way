@@ -1,4 +1,4 @@
-import {RadixTree} from '../../../dist/router.js';
+import {RadixTree} from '../../../dist/index.js';
 import {title, now, print, operations} from '../utils.js';
 
 const router = new RadixTree();
