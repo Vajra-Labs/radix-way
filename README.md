@@ -1,6 +1,36 @@
-# radix-way
+<h1 align="center">⚡ Radix Way</h1>
 
-A high-performance HTTP router using radix tree algorithm for Node.js and Bun.
+<p align="center">A high-performance HTTP router using radix tree algorithm for Node.js and Bun.</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/radix-way">
+    <img src="https://img.shields.io/npm/v/radix-way?color=blue&label=npm" alt="npm version">
+  </a>
+  <a href="https://www.npmjs.com/package/radix-way">
+    <img src="https://img.shields.io/npm/dm/radix-way?color=blue" alt="npm downloads">
+  </a>
+  <a href="https://github.com/Vajra-Labs/radix-way/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT">
+  </a>
+  <a href="https://github.com/Vajra-Labs/radix-way/releases">
+    <img src="https://img.shields.io/github/v/release/Vajra-Labs/radix-way?label=Release" alt="Release">
+  </a>
+  <a href="https://nodejs.org">
+    <img src="https://img.shields.io/badge/Node.js-20%2B-green.svg" alt="Node.js Version">
+  </a>
+  <a href="https://bun.sh">
+    <img src="https://img.shields.io/badge/Bun-1.0%2B-black.svg" alt="Bun Version">
+  </a>
+</p>
+
+<p align="center">
+  <a href="#quick-start">🚀 Quick Start</a> •
+  <a href="#route-types">📖 Route Types</a> •
+  <a href="#api">📚 API</a> •
+  <a href="#performance">⚡ Performance</a> •
+  <a href="#advanced-features">🔧 Advanced</a> •
+  <a href="#whats-different-from-find-my-way">🔍 vs find-my-way</a>
+</p>
 
 ## Features
 
@@ -10,6 +40,51 @@ A high-performance HTTP router using radix tree algorithm for Node.js and Bun.
 - 💾 **Memory Efficient** - 50-78% less memory than find-my-way at scale (500+ routes)
 - 🔧 **TypeScript** - Full type safety
 - 🌲 **Radix Tree** - Single-tree architecture for optimal memory usage
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Route Types](#route-types)
+  - [Static Routes](#static-routes)
+  - [Dynamic Routes (Parameters)](#dynamic-routes-parameters)
+  - [Wildcard Routes](#wildcard-routes)
+  - [Regex Routes](#regex-routes)
+  - [Optional Parameters](#optional-parameters)
+  - [Regex Pattern Syntax](#regex-pattern-syntax)
+- [API](#api)
+  - [`new RadixTree<T>()`](#new-radixtreet)
+  - [`add(method, path, handler)`](#addmethod-string-path-string-handler-t-void)
+  - [`match(method, path)`](#matchmethod-string-path-string-t-paramindexmap-string--null)
+  - [`printTree(print?)`](#printtreeprint-boolean-void--string)
+- [Usage with HTTP Server](#usage-with-http-server)
+  - [Node.js](#nodejs)
+  - [Bun](#bun)
+- [Parameter Mapping](#parameter-mapping)
+- [Performance](#performance)
+  - [Speed Comparison](#speed-comparison)
+  - [Memory Usage](#memory-usage-500-routes)
+  - [Run Benchmarks](#run-benchmarks)
+- [Architecture](#architecture)
+  - [Single-Tree vs Multi-Tree Design](#single-tree-vs-multi-tree-design)
+- [How It Works](#how-it-works)
+- [Advanced Features](#advanced-features)
+  - [Route Constraints](#route-constraints)
+  - [Multi-Parameter Routes](#multi-parameter-routes)
+    - [Separator Support](#separator-support)
+    - [With Regex Constraints](#with-regex-constraints)
+    - [With Static Text](#with-static-text)
+    - [Limitations](#limitations)
+  - [ALL Method Support](#all-method-support)
+- [TypeScript](#typescript)
+- [Error Handling](#error-handling)
+  - [Regex Pattern Validation](#regex-pattern-validation)
+  - [Complex Pattern Examples](#complex-pattern-examples)
+- [Debugging](#debugging)
+- [What's Different from find-my-way?](#whats-different-from-find-my-way)
+- [Contributing](#contributing)
+- [License](#license)
+- [Credits](#credits)
 
 ## Installation
 
@@ -186,6 +261,7 @@ if (result) {
 Print the router tree structure for debugging.
 
 **Parameters:**
+
 - `print` - When `true` (default), logs to console and returns `void`. When `false`, returns the string representation.
 
 ```typescript
@@ -432,18 +508,95 @@ router.match('GET', '/color/#GGGGGG'); // null (invalid hex)
 
 ### Multi-Parameter Routes
 
-Multiple parameters in a single segment:
+Define multiple parameters in a single path segment using separators:
+
+#### Separator Support
+
+✅ **Fully Supported:**
+
+1. **Dash (`-`)** - `/time/:hour-:minute` → `{hour: "14", minute: "30"}`
+2. **Dot (`.`)** - `/file.:name.:ext` → `{name: "config", ext: "json"}`
+3. **Mixed (`-` and `.`)** - `/api/:a-:b.:c` → 3 params with different separators
+4. **With Regex** - `/date/:y{\d{4}}-:m{\d{2}}` → Validates while extracting params
+5. **With Static Text** - `/files/:name{[a-z]+}.min.:ext` → Static text between params
+6. **Multiple Params** - `/ip/:a.:b.:c.:d` → 4+ params in same segment
+
+❌ **Not Supported:**
+
+- Underscore (`_`), At (`@`), or any other custom separators
+- These are treated as part of the parameter name, not separators
+
+**Only `-` (dash) and `.` (dot) are supported as multi-param separators.**
 
 ```typescript
-// Date/time format: /at/14-30
-router.add('GET', '/at/:hour-:minute', timeHandler);
+// Dash separator
+router.add('GET', '/time/:hour-:minute', timeHandler);
+router.match('GET', '/time/14-30');
+// Returns: [timeHandler, {hour: 0, minute: 1}, ['14', '30']]
 
-// File with extension: /file.readme.md
+// Dot separator
 router.add('GET', '/file.:name.:ext', fileHandler);
+router.match('GET', '/file.config.json');
+// Returns: [fileHandler, {name: 0, ext: 1}, ['config', 'json']]
 
-const result = router.match('GET', '/at/14-30');
-// result = [timeHandler, {hour: 0, minute: 1}, ['14', '30']]
+// Multiple params in same segment
+router.add('GET', '/date/:year-:month-:day', dateHandler);
+router.match('GET', '/date/2024-12-28');
+// Returns: [dateHandler, {year: 0, month: 1, day: 2}, ['2024', '12', '28']]
+
+// Mixed separators (dash and dot)
+router.add('GET', '/api/:version.:endpoint-:id', apiHandler);
+router.match('GET', '/api/v2.users-123');
+// Returns: [apiHandler, {version: 0, endpoint: 1, id: 2}, ['v2', 'users', '123']]
 ```
+
+#### With Regex Constraints
+
+Combine multi-params with regex validation:
+
+```typescript
+// Date format validation
+router.add('GET', '/date/:year{\\d{4}}-:month{\\d{2}}-:day{\\d{2}}', handler);
+router.match('GET', '/date/2024-12-28'); // ✅ matches
+router.match('GET', '/date/24-12-28'); // ❌ null (year must be 4 digits)
+
+// Version numbers
+router.add('GET', '/v/:major{\\d+}.:minor{\\d+}.:patch{\\d+}', versionHandler);
+router.match('GET', '/v/1.2.3'); // ✅ matches
+
+// IP address
+router.add(
+  'GET',
+  '/ip/:a{\\d{1,3}}.:b{\\d{1,3}}.:c{\\d{1,3}}.:d{\\d{1,3}}',
+  ipHandler,
+);
+router.match('GET', '/ip/192.168.1.1'); // ✅ matches
+```
+
+#### With Static Text
+
+Mix static text with multi-params:
+
+```typescript
+// Static text between params
+router.add('GET', '/files/:name{[a-z]+}.min.:ext', handler);
+router.match('GET', '/files/app.min.js'); // ✅ {name: 'app', ext: 'js'}
+router.match('GET', '/files/app.js'); // ❌ null (missing .min.)
+
+// Image dimensions
+router.add('GET', '/img-:width{\\d+}x:height{\\d+}.png', imgHandler);
+router.match('GET', '/img-800x600.png'); // ✅ {width: '800', height: '600'}
+
+// API versioning with prefix
+router.add('GET', '/api/v:version.:endpoint', apiHandler);
+router.match('GET', '/api/v2.users'); // ✅ {version: '2', endpoint: 'users'}
+```
+
+#### Limitations
+
+- **Other separators not supported**: `_`, `@`, or custom characters won't work as multi-param separators
+- **Example**: `/user/:first_:last` treats `first_:last` as a single parameter name, not two params
+- **Workaround**: Use separate segments: `/user/:first/:last` or supported separators: `/user/:first-:last`
 
 ### ALL Method Support
 

@@ -14,7 +14,7 @@ const OPTIONAL_PARAM_REGEXP = /(\/:[^/{}]*?)\?(\/?)/;
 
 // Regex cache for performance optimization
 const REGEX_CACHE: Record<string, RegExp> = Object.create(null);
-export const getCachedRegex = (pattern: string): RegExp => {
+const getCachedRegex = (pattern: string): RegExp => {
   if (!REGEX_CACHE[pattern]) {
     REGEX_CACHE[pattern] = new RegExp('^' + pattern + '$');
   }
@@ -124,6 +124,9 @@ export class RadixTree<T> implements Router<T> {
         params.push('*');
         currentNode = (currentNode as StaticNode<T>).createWildcardChild();
         parentNodePathIndex = i + 1;
+        if (i !== pattern.length - 1) {
+          throw new Error('Wildcard must be the last character in the route');
+        }
       }
     }
     const paramMap = Object.create(null);

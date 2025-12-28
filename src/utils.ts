@@ -61,13 +61,16 @@ export const escapeRegExp = (str: string) =>
   str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const trimRegExpStartAndEnd = (regexString: string) => {
-  if (regexString.charCodeAt(1) === 94) {
-    // ^
-    regexString = regexString.slice(0, 1) + regexString.slice(2);
+  // Only remove ^ and $ if they are regex anchors, NOT part of character classes
+  // ^ at position 0 (outside brackets) is an anchor
+  // $ at last position (outside brackets) is an anchor
+  if (regexString.charCodeAt(0) === 94) {
+    // ^ at start (anchor)
+    regexString = regexString.slice(1);
   }
-  if (regexString.charCodeAt(regexString.length - 2) === 36) {
-    // $
-    regexString = regexString.slice(0, -2) + regexString.slice(-1);
+  if (regexString.charCodeAt(regexString.length - 1) === 36) {
+    // $ at end (anchor)
+    regexString = regexString.slice(0, -1);
   }
   return regexString;
 };
