@@ -14,11 +14,11 @@ describe('RadixTree', () => {
       router.add('GET', '/posts', 'list-posts');
       const r1 = router.match('GET', '/users');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('list-users');
+      expect(r1![0][0]).toBe('list-users');
       expect(r1![2]).toEqual([]);
       const r2 = router.match('GET', '/posts');
       expect(r2).not.toBeNull();
-      expect(r2![0]).toBe('list-posts');
+      expect(r2![0][0]).toBe('list-posts');
       expect(r2![2]).toEqual([]);
     });
 
@@ -40,8 +40,8 @@ describe('RadixTree', () => {
       router.add('GET', '/users/:id', 'get-user');
       const result = router.match('GET', '/users/123');
       expect(result).not.toBeNull();
-      const [handler, paramMap, params] = result!;
-      expect(handler).toBe('get-user');
+      const [handlers, paramMap, params] = result!;
+      expect(handlers[0]).toBe('get-user');
       expect(paramMap).toEqual({id: 0});
       expect(params).toEqual(['123']);
     });
@@ -50,8 +50,8 @@ describe('RadixTree', () => {
       router.add('GET', '/users/:userId/posts/:postId', 'get-post');
       const result = router.match('GET', '/users/42/posts/99');
       expect(result).not.toBeNull();
-      const [handler, paramMap, params] = result!;
-      expect(handler).toBe('get-post');
+      const [handlers, paramMap, params] = result!;
+      expect(handlers[0]).toBe('get-post');
       expect(paramMap).toEqual({userId: 0, postId: 1});
       expect(params).toEqual(['42', '99']);
     });
@@ -68,8 +68,8 @@ describe('RadixTree', () => {
       router.add('GET', '/posts/:id{\\d+}', 'get-post-by-id');
       const result = router.match('GET', '/posts/123');
       expect(result).not.toBeNull();
-      const [handler, , params] = result!;
-      expect(handler).toBe('get-post-by-id');
+      const [handlers, , params] = result!;
+      expect(handlers[0]).toBe('get-post-by-id');
       expect(params).toEqual(['123']);
       expect(router.match('GET', '/posts/abc')).toBeNull();
     });
@@ -79,11 +79,11 @@ describe('RadixTree', () => {
       router.add('GET', '/posts/:slug{[a-z-]+}', 'slug');
       const r1 = router.match('GET', '/posts/123');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('numeric');
+      expect(r1![0][0]).toBe('numeric');
       expect(r1![2]).toEqual(['123']);
       const r2 = router.match('GET', '/posts/my-post');
       expect(r2).not.toBeNull();
-      expect(r2![0]).toBe('slug');
+      expect(r2![0][0]).toBe('slug');
       expect(r2![2]).toEqual(['my-post']);
     });
   });
@@ -99,8 +99,8 @@ describe('RadixTree', () => {
       router.add('GET', '/at/:hour-:minute', 'get-time');
       const result = router.match('GET', '/at/14-30');
       expect(result).not.toBeNull();
-      const [handler, , params] = result!;
-      expect(handler).toBe('get-time');
+      const [handlers, , params] = result!;
+      expect(handlers[0]).toBe('get-time');
       expect(params).toEqual(['14', '30']);
     });
 
@@ -108,8 +108,8 @@ describe('RadixTree', () => {
       router.add('GET', '/file.:name.:ext', 'get-file');
       const result = router.match('GET', '/file.readme.md');
       expect(result).not.toBeNull();
-      const [handler, , params] = result!;
-      expect(handler).toBe('get-file');
+      const [handlers, , params] = result!;
+      expect(handlers[0]).toBe('get-file');
       expect(params).toEqual(['readme', 'md']);
     });
   });
@@ -125,11 +125,11 @@ describe('RadixTree', () => {
       router.add('GET', '/file.:ext', 'get-file');
       const r1 = router.match('GET', '/file.pdf');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('get-file');
+      expect(r1![0][0]).toBe('get-file');
       expect(r1![2]).toEqual(['pdf']);
       const r2 = router.match('GET', '/file.jpg');
       expect(r2).not.toBeNull();
-      expect(r2![0]).toBe('get-file');
+      expect(r2![0][0]).toBe('get-file');
       expect(r2![2]).toEqual(['jpg']);
     });
 
@@ -137,8 +137,8 @@ describe('RadixTree', () => {
       router.add('GET', '/image-:id.png', 'get-image');
       const result = router.match('GET', '/image-42.png');
       expect(result).not.toBeNull();
-      const [handler, , params] = result!;
-      expect(handler).toBe('get-image');
+      const [handlers, , params] = result!;
+      expect(handlers[0]).toBe('get-image');
       expect(params).toEqual(['42']);
       expect(router.match('GET', '/image-42.jpg')).toBeNull();
     });
@@ -155,11 +155,11 @@ describe('RadixTree', () => {
       router.add('GET', '/items/:id?', 'get-items');
       const r1 = router.match('GET', '/items');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('get-items');
+      expect(r1![0][0]).toBe('get-items');
       expect(r1![2]).toEqual([]);
       const r2 = router.match('GET', '/items/123');
       expect(r2).not.toBeNull();
-      expect(r2![0]).toBe('get-items');
+      expect(r2![0][0]).toBe('get-items');
       expect(r2![2]).toEqual(['123']);
     });
   });
@@ -175,11 +175,11 @@ describe('RadixTree', () => {
       router.add('GET', '/files/*', 'serve-file');
       const r1 = router.match('GET', '/files/docs/readme.md');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('serve-file');
+      expect(r1![0][0]).toBe('serve-file');
       expect(r1![2]).toEqual(['docs/readme.md']);
       const r2 = router.match('GET', '/files/a/b/c/d.txt');
       expect(r2).not.toBeNull();
-      expect(r2![0]).toBe('serve-file');
+      expect(r2![0][0]).toBe('serve-file');
       expect(r2![2]).toEqual(['a/b/c/d.txt']);
     });
   });
@@ -195,8 +195,8 @@ describe('RadixTree', () => {
       router.add('GET', '/name::customVerb', 'custom');
       const result = router.match('GET', '/name:customVerb');
       expect(result).not.toBeNull();
-      const [handler, , params] = result!;
-      expect(handler).toBe('custom');
+      const [handlers, , params] = result!;
+      expect(handlers[0]).toBe('custom');
       expect(params).toEqual([':customVerb']);
     });
   });
@@ -213,11 +213,11 @@ describe('RadixTree', () => {
       router.add('GET', '/users/me', 'static');
       const r1 = router.match('GET', '/users/me');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('static');
+      expect(r1![0][0]).toBe('static');
       expect(r1![2]).toEqual([]);
       const r2 = router.match('GET', '/users/123');
       expect(r2).not.toBeNull();
-      expect(r2![0]).toBe('param');
+      expect(r2![0][0]).toBe('param');
       expect(r2![2]).toEqual(['123']);
     });
 
@@ -226,11 +226,11 @@ describe('RadixTree', () => {
       router.add('GET', '/files/:id', 'param');
       const r1 = router.match('GET', '/files/123');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('param');
+      expect(r1![0][0]).toBe('param');
       expect(r1![2]).toEqual(['123']);
       const r2 = router.match('GET', '/files/a/b/c');
       expect(r2).not.toBeNull();
-      expect(r2![0]).toBe('wildcard');
+      expect(r2![0][0]).toBe('wildcard');
       expect(r2![2]).toEqual(['a/b/c']);
     });
   });
@@ -247,10 +247,10 @@ describe('RadixTree', () => {
       router.add('POST', '/users', 'post');
       router.add('PUT', '/users', 'put');
       router.add('DELETE', '/users', 'delete');
-      expect(router.match('GET', '/users')![0]).toBe('get');
-      expect(router.match('POST', '/users')![0]).toBe('post');
-      expect(router.match('PUT', '/users')![0]).toBe('put');
-      expect(router.match('DELETE', '/users')![0]).toBe('delete');
+      expect(router.match('GET', '/users')![0][0]).toBe('get');
+      expect(router.match('POST', '/users')![0][0]).toBe('post');
+      expect(router.match('PUT', '/users')![0][0]).toBe('put');
+      expect(router.match('DELETE', '/users')![0][0]).toBe('delete');
     });
   });
 
@@ -265,8 +265,8 @@ describe('RadixTree', () => {
       router.add('GET', '/', 'root');
       const result = router.match('GET', '/');
       expect(result).not.toBeNull();
-      const [handler, , params] = result!;
-      expect(handler).toBe('root');
+      const [handlers, , params] = result!;
+      expect(handlers[0]).toBe('root');
       expect(params).toEqual([]);
     });
 
@@ -274,8 +274,8 @@ describe('RadixTree', () => {
       router.add('GET', '/users', 'handler');
       const result = router.match('GET', '/users');
       expect(result).not.toBeNull();
-      const [handler, , params] = result!;
-      expect(handler).toBe('handler');
+      const [handlers, , params] = result!;
+      expect(handlers[0]).toBe('handler');
       expect(params).toEqual([]);
     });
 
@@ -283,8 +283,8 @@ describe('RadixTree', () => {
       router.add('GET', '/users/:id', 'handler');
       const result = router.match('GET', '/users/user-123');
       expect(result).not.toBeNull();
-      const [handler, , params] = result!;
-      expect(handler).toBe('handler');
+      const [handlers, , params] = result!;
+      expect(handlers[0]).toBe('handler');
       expect(params).toEqual(['user-123']);
     });
   });
@@ -300,13 +300,13 @@ describe('RadixTree', () => {
       router.add('ALL', '/api', 'all-handler');
       const getRes = router.match('GET', '/api');
       expect(getRes).not.toBeNull();
-      expect(getRes![0]).toBe('all-handler');
+      expect(getRes![0][0]).toBe('all-handler');
       const postRes = router.match('POST', '/api');
       expect(postRes).not.toBeNull();
-      expect(postRes![0]).toBe('all-handler');
+      expect(postRes![0][0]).toBe('all-handler');
       const putRes = router.match('PUT', '/api');
       expect(putRes).not.toBeNull();
-      expect(putRes![0]).toBe('all-handler');
+      expect(putRes![0][0]).toBe('all-handler');
     });
 
     it('should prefer specific method over ALL', () => {
@@ -314,18 +314,18 @@ describe('RadixTree', () => {
       router.add('GET', '/api', 'get-handler');
       const getRes = router.match('GET', '/api');
       expect(getRes).not.toBeNull();
-      expect(getRes![0]).toBe('get-handler');
+      expect(getRes![0][0]).toBe('get-handler');
       const postRes = router.match('POST', '/api');
       expect(postRes).not.toBeNull();
-      expect(postRes![0]).toBe('all-handler');
+      expect(postRes![0][0]).toBe('all-handler');
     });
 
     it('should work with ALL and parametric routes', () => {
       router.add('ALL', '/users/:id', 'all-user');
       const result = router.match('DELETE', '/users/123');
       expect(result).not.toBeNull();
-      const [handler, , params] = result!;
-      expect(handler).toBe('all-user');
+      const [handlers, , params] = result!;
+      expect(handlers[0]).toBe('all-user');
       expect(params).toEqual(['123']);
     });
   });
@@ -345,7 +345,7 @@ describe('RadixTree', () => {
       );
       const r1 = router.match('GET', '/users/123/posts/abc123');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('user-post');
+      expect(r1![0][0]).toBe('user-post');
       expect(r1![2]).toEqual(['123', 'abc123']);
 
       const r2 = router.match('GET', '/users/999/posts/deadbeef');
@@ -367,7 +367,7 @@ describe('RadixTree', () => {
       );
       const r1 = router.match('GET', '/api/v1/users/12345678');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('versioned-api');
+      expect(r1![0][0]).toBe('versioned-api');
       expect(r1![2]).toEqual(['1', '12345678']);
 
       const r2 = router.match('GET', '/api/v99/users/abcdef01');
@@ -386,7 +386,7 @@ describe('RadixTree', () => {
       );
       const r1 = router.match('GET', '/time/2024-12-25');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('date');
+      expect(r1![0][0]).toBe('date');
       expect(r1![2]).toEqual(['2024', '12', '25']);
 
       const r2 = router.match('GET', '/time/1999-01-01');
@@ -401,7 +401,7 @@ describe('RadixTree', () => {
       router.add('GET', '/blog/:slug{[a-z0-9]+(?:-[a-z0-9]+)*}', 'blog-post');
       const r1 = router.match('GET', '/blog/hello-world');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('blog-post');
+      expect(r1![0][0]).toBe('blog-post');
       expect(r1![2]).toEqual(['hello-world']);
 
       const r2 = router.match('GET', '/blog/my-post-123');
@@ -420,7 +420,7 @@ describe('RadixTree', () => {
       );
       const r1 = router.match('GET', '/files/config.json');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('file-handler');
+      expect(r1![0][0]).toBe('file-handler');
       expect(r1![2]).toEqual(['config', 'json']);
 
       const r2 = router.match('GET', '/files/data-file.xml');
@@ -446,7 +446,7 @@ describe('RadixTree', () => {
         '/resources/550e8400-e29b-41d4-a716-446655440000',
       );
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('uuid-resource');
+      expect(r1![0][0]).toBe('uuid-resource');
       expect(r1![2]).toEqual(['550e8400-e29b-41d4-a716-446655440000']);
 
       // Should fail - invalid format
@@ -457,7 +457,7 @@ describe('RadixTree', () => {
       router.add('GET', '/server/:ip{(?:\\d{1,3}\\.){3}\\d{1,3}}', 'server-ip');
       const r1 = router.match('GET', '/server/192.168.1.1');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('server-ip');
+      expect(r1![0][0]).toBe('server-ip');
       expect(r1![2]).toEqual(['192.168.1.1']);
 
       const r2 = router.match('GET', '/server/10.0.0.1');
@@ -474,12 +474,12 @@ describe('RadixTree', () => {
 
       const r1 = router.match('GET', '/mixed/123');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('regex-param');
+      expect(r1![0][0]).toBe('regex-param');
       expect(r1![2]).toEqual(['123']);
 
       const r2 = router.match('GET', '/mixed/abc');
       expect(r2).not.toBeNull();
-      expect(r2![0]).toBe('simple-param');
+      expect(r2![0][0]).toBe('simple-param');
       expect(r2![2]).toEqual(['abc']);
     });
 
@@ -489,17 +489,17 @@ describe('RadixTree', () => {
 
       const r1 = router.match('GET', '/bt/12-34');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('two-numbers');
+      expect(r1![0][0]).toBe('two-numbers');
       expect(r1![2]).toEqual(['12', '34']);
 
       const r2 = router.match('GET', '/bt/hello');
       expect(r2).not.toBeNull();
-      expect(r2![0]).toBe('simple-text');
+      expect(r2![0][0]).toBe('simple-text');
       expect(r2![2]).toEqual(['hello']);
 
       const r3 = router.match('GET', '/bt/12-abc');
       expect(r3).not.toBeNull();
-      expect(r3![0]).toBe('simple-text');
+      expect(r3![0][0]).toBe('simple-text');
       expect(r3![2]).toEqual(['12-abc']);
     });
 
@@ -511,7 +511,7 @@ describe('RadixTree', () => {
       );
       const r1 = router.match('GET', '/user/test@example.com');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('user-email');
+      expect(r1![0][0]).toBe('user-email');
       expect(r1![2]).toEqual(['test@example.com']);
 
       const r2 = router.match('GET', '/user/john.doe+tag@company.co.uk');
@@ -526,7 +526,7 @@ describe('RadixTree', () => {
       router.add('GET', '/color/:hex{#[0-9a-fA-F]{6}}', 'hex-color');
       const r1 = router.match('GET', '/color/#FF5733');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('hex-color');
+      expect(r1![0][0]).toBe('hex-color');
       expect(r1![2]).toEqual(['#FF5733']);
 
       const r2 = router.match('GET', '/color/#000000');
@@ -541,7 +541,7 @@ describe('RadixTree', () => {
       router.add('GET', '/package/:version{\\d+\\.\\d+\\.\\d+}', 'semver');
       const r1 = router.match('GET', '/package/1.2.3');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('semver');
+      expect(r1![0][0]).toBe('semver');
       expect(r1![2]).toEqual(['1.2.3']);
 
       const r2 = router.match('GET', '/package/10.20.30');
@@ -556,7 +556,7 @@ describe('RadixTree', () => {
       router.add('GET', '/a/b/c/d/e/f/:id{\\d+}', 'deep-nested');
       const r1 = router.match('GET', '/a/b/c/d/e/f/123');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('deep-nested');
+      expect(r1![0][0]).toBe('deep-nested');
       expect(r1![2]).toEqual(['123']);
 
       // Should fail - not numeric
@@ -567,7 +567,7 @@ describe('RadixTree', () => {
       router.add('GET', '/proxy/:subdomain.:domain.:tld', 'proxy');
       const r1 = router.match('GET', '/proxy/www.example.com');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('proxy');
+      expect(r1![0][0]).toBe('proxy');
       expect(r1![2]).toEqual(['www', 'example', 'com']);
 
       const r2 = router.match('GET', '/proxy/api.github.io');
@@ -583,7 +583,7 @@ describe('RadixTree', () => {
       );
       const r1 = router.match('GET', '/media/image/123');
       expect(r1).not.toBeNull();
-      expect(r1![0]).toBe('media-handler');
+      expect(r1![0][0]).toBe('media-handler');
       expect(r1![2]).toEqual(['image', '123']);
 
       const r2 = router.match('GET', '/media/video/456');

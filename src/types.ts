@@ -45,9 +45,9 @@ export type ParamIndexMap = Record<string, number>;
 
 export type Params = Record<string, string>;
 
-export type Result<T> = [T, ParamIndexMap, ParamStash] | null;
+export type Result<T> = [T[], ParamIndexMap, ParamStash] | null;
 
-export type HandlerSet<T> = [T, ParamIndexMap];
+export type HandlerSet<T> = [T[], ParamIndexMap];
 
 export type HTTPMethod =
   | 'ACL'

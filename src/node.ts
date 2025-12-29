@@ -15,7 +15,11 @@ export class Node<T> {
   addHandler(method: HTTPMethod, handler: T, paramMap: ParamIndexMap): void {
     if (this.handlers === null) this.handlers = Object.create(null);
     this.isLeafNode = true;
-    this.handlers[method] = [handler, paramMap];
+    if (this.handlers[method]) {
+      this.handlers[method][0].push(handler);
+    } else {
+      this.handlers[method] = [[handler], paramMap];
+    }
   }
 }
 

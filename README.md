@@ -38,6 +38,7 @@
 - 🪶 **Zero Dependencies** - Minimal footprint, no external packages
 - 🎯 **Flexible Routing** - Supports static, dynamic, wildcard, and regex routes
 - 🎨 **Advanced Patterns** - Multi-parameters, optional params, regex constraints
+- 🔗 **Middleware Support** - Multiple handlers per route for middleware chains
 - 🔧 **TypeScript Support** - Full type safety with generics
 - 🛠️ **Simple API** - Clean 3-method interface: add, match, printTree
 - 📖 **Well Documented** - Comprehensive examples and guides
@@ -68,6 +69,7 @@
   - [Run Benchmarks](#run-benchmarks)
 - [How It Works](#how-it-works)
 - [Advanced Features](#advanced-features)
+  - [Middleware Support](#middleware-support)
   - [Route Constraints](#route-constraints)
   - [Multi-Parameter Routes](#multi-parameter-routes)
     - [Separator Support](#separator-support)
@@ -108,8 +110,8 @@ router.add('GET', '/files/*', () => 'Serve files');
 // Match routes
 const result = router.match('GET', '/users/123');
 if (result) {
-  const [handler, paramMap, params] = result;
-  console.log(handler); // () => 'Get user'
+  const [handlers, paramMap, params] = result;
+  console.log(handlers); // [() => 'Get user']
   console.log(paramMap); // {id: 0}
   console.log(params); // ['123']
 }
@@ -131,7 +133,7 @@ router.add('GET', '/users/:id', handler);
 router.add('GET', '/posts/:category/:slug', handler);
 
 const result = router.match('GET', '/users/42');
-// result = [handler, {id: 0}, ['42']]
+// result = [[handler], {id: 0}, ['42']]
 ```
 
 ### Wildcard Routes
@@ -140,7 +142,7 @@ const result = router.match('GET', '/users/42');
 router.add('GET', '/static/*', handler);
 
 const result = router.match('GET', '/static/css/style.css');
-// result = [handler, {'*': 0}, ['css/style.css']]
+// result = [[handler], {'*': 0}, ['css/style.css']]
 ```
 
 ### Regex Routes
@@ -217,7 +219,7 @@ const router = new RadixTree<Handler>();
 
 ### `add(method: string, path: string, handler: T): void`
 
-Add a route to the router.
+Add a route to the router. Multiple handlers can be added to the same route for middleware chains.
 
 **Parameters:**
 
@@ -226,22 +228,28 @@ Add a route to the router.
 - `handler` - Handler function or any value
 
 ```typescript
+// Single handler
 router.add('GET', '/api/users/:id', async (req, res) => {
   // handler logic
 });
+
+// Multiple handlers (middleware pattern)
+router.add('GET', '/api/users', authMiddleware);
+router.add('GET', '/api/users', loggingMiddleware);
+router.add('GET', '/api/users', usersHandler);
 
 // Match all HTTP methods
 router.add('ALL', '/api/health', healthCheckHandler);
 ```
 
-### `match(method: string, path: string): [T, ParamIndexMap, string[]] | null`
+### `match(method: string, path: string): [T[], ParamIndexMap, string[]] | null`
 
-Match a route and return handler with parameters.
+Match a route and return handlers with parameters.
 
 **Returns:**
 
-- `[handler, paramMap, params]` - If match found:
-  - `handler` - The handler function/value
+- `[handlers, paramMap, params]` - If match found:
+  - `handlers` - Array of handler functions/values (supports middleware chains)
   - `paramMap` - Parameter name to index mapping (e.g., `{id: 0, slug: 1}`)
   - `params` - Array of extracted parameter values
 - `null` - If no match found
@@ -249,9 +257,18 @@ Match a route and return handler with parameters.
 ```typescript
 const result = router.match('GET', '/api/users/123');
 if (result) {
-  const [handler, paramMap, params] = result;
+  const [handlers, paramMap, params] = result;
   const userId = params[paramMap.id]; // '123'
-  await handler(req, res);
+
+  // Execute single handler
+  if (handlers.length === 1) {
+    await handlers[0](req, res);
+  }
+
+  // Execute middleware chain
+  for (const handler of handlers) {
+    await handler(req, res);
+  }
 }
 ```
 
@@ -300,14 +317,15 @@ createServer((req, res) => {
     return;
   }
 
-  const [handler, paramMap, params] = result;
+  const [handlers, paramMap, params] = result;
 
   // Access params by name
   if (paramMap.id !== undefined) {
     console.log('User ID:', params[paramMap.id]);
   }
 
-  handler(req, res);
+  // Execute handler(s)
+  handlers[0](req, res);
 }).listen(3000);
 ```
 
@@ -331,8 +349,8 @@ Bun.serve({
       return new Response('Not Found', {status: 404});
     }
 
-    const [handler] = result;
-    return handler(req);
+    const [handlers] = result;
+    return handlers[0](req);
   },
 });
 ```
@@ -346,7 +364,7 @@ router.add('GET', '/posts/:category/:slug', handler);
 
 const result = router.match('GET', '/posts/tech/hello-world');
 if (result) {
-  const [handler, paramMap, params] = result;
+  const [handlers, paramMap, params] = result;
   const category = params[paramMap.category]; // 'tech'
   const slug = params[paramMap.slug]; // 'hello-world'
 }
@@ -417,6 +435,38 @@ Example tree for routes:
 ```
 
 ## Advanced Features
+
+### Middleware Support
+
+Add multiple handlers to the same route to create middleware chains:
+
+```typescript
+const router = new RadixTree<(req: any, res: any, next?: () => void) => void>();
+
+// Add middleware handlers to the same route
+router.add('GET', '/api/users', authMiddleware);
+router.add('GET', '/api/users', loggingMiddleware);
+router.add('GET', '/api/users', usersHandler);
+
+const result = router.match('GET', '/api/users');
+if (result) {
+  const [handlers, paramMap, params] = result;
+
+  // Execute all handlers in sequence
+  for (const handler of handlers) {
+    await handler(req, res);
+  }
+
+  // Or execute with next() pattern
+  let idx = 0;
+  const next = () => {
+    if (idx < handlers.length) {
+      handlers[idx++](req, res, next);
+    }
+  };
+  next();
+}
+```
 
 ### Route Constraints
 
@@ -595,7 +645,7 @@ if (!result) {
   return;
 }
 
-const [handler, paramMap, params] = result;
+const [handlers, paramMap, params] = result;
 // Handle the request...
 ```
 
@@ -611,9 +661,9 @@ router.add('GET', '/users/:id{\\d+}', handler);
 const r1 = router.match('GET', '/users/abc');
 console.log(r1); // null
 
-// Valid - returns handler
+// Valid - returns handlers
 const r2 = router.match('GET', '/users/123');
-console.log(r2); // [handler, {id: 0}, ['123']]
+console.log(r2); // [[handler], {id: 0}, ['123']]
 ```
 
 ### Complex Pattern Examples
@@ -678,7 +728,7 @@ While both routers use radix trees, there are key architectural differences:
 | Performance          | 43-118% faster across all types | Baseline                          |
 | Optimization         | Dynamic code generation         | Loop-based matching               |
 | Best For             | All applications                | Advanced routing features         |
-| Route Registration   | Single handler per route        | Supports constraints & versioning |
+| Route Registration   | Multiple handlers (middleware)  | Supports constraints & versioning |
 
 **Migration from find-my-way:**
 
@@ -695,8 +745,9 @@ const router = new RadixTree();
 router.add('GET', '/users/:id', (req, res) => {});
 const result = router.match('GET', '/users/123');
 if (result) {
-  const [handler, paramMap, params] = result;
+  const [handlers, paramMap, params] = result;
   console.log(params[paramMap.id]);
+  handlers[0](req, res);
 }
 ```
 
