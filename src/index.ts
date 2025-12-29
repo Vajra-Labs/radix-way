@@ -1,10 +1,10 @@
-import assert from 'node:assert';
 import {
   prettyPrint,
   escapeRegExp,
   trimRegExpStartAndEnd,
   getClosingBracePosition,
 } from './utils';
+import assert from 'node:assert';
 import {METHOD_NAME_ALL} from './types';
 import {NODE_TYPES, StaticNode} from './node';
 import type {Result, Router, HTTPMethod} from './types';
@@ -22,9 +22,16 @@ const getCachedRegex = (pattern: string): RegExp => {
 };
 
 export class RadixTree<T> implements Router<T> {
-  #tree: StaticNode<T> = new StaticNode<T>('/');
+  #trees: StaticNode<T> = new StaticNode<T>('/');
 
   add(method: HTTPMethod, path: string, handler: T): void {
+    // path validation
+    assert(typeof path === 'string', 'Path should be a string');
+    assert(path.length > 0, 'The path could not be empty');
+    assert(
+      path[0] === '/' || path[0] === '*',
+      'The first character of a path should be `/` or `*`',
+    );
     const optional = path.match(OPTIONAL_PARAM_REGEXP);
     if (optional) {
       assert(
@@ -39,9 +46,9 @@ export class RadixTree<T> implements Router<T> {
     }
     // Insert value in tree
     let pattern = path;
-    let currentNode: StaticNode<T> | ParametricNode<T> | WildcardNode<T> =
-      this.#tree;
-    let parentNodePathIndex = (currentNode as StaticNode<T>).prefix.length;
+    let curNode: StaticNode<T> | ParametricNode<T> | WildcardNode<T> =
+      this.#trees;
+    let parentNodePathIndex = (curNode as StaticNode<T>).prefix.length;
     const params: string[] = [];
     for (let i = 0; i <= pattern.length; i++) {
       const isParametricNode = pattern.charCodeAt(i) === 58; // :
@@ -52,9 +59,7 @@ export class RadixTree<T> implements Router<T> {
         (i === pattern.length && i !== parentNodePathIndex)
       ) {
         const staticNodePath = pattern.slice(parentNodePathIndex, i);
-        currentNode = (currentNode as StaticNode<T>).createStaticChild(
-          staticNodePath,
-        );
+        curNode = (curNode as StaticNode<T>).createStaticChild(staticNodePath);
       }
       if (isParametricNode) {
         let isRegexNode = false;
@@ -112,9 +117,11 @@ export class RadixTree<T> implements Router<T> {
               const regex = isRegexNode
                 ? getCachedRegex(regexps.join(''))
                 : null;
-              currentNode = (
-                currentNode as StaticNode<T>
-              ).createParametricChild(regex, staticPart || null, nodePath);
+              curNode = (curNode as StaticNode<T>).createParametricChild(
+                regex,
+                staticPart || null,
+                nodePath,
+              );
               parentNodePathIndex = i + 1;
               break;
             }
@@ -122,7 +129,7 @@ export class RadixTree<T> implements Router<T> {
         }
       } else if (isWildcardNode) {
         params.push('*');
-        currentNode = (currentNode as StaticNode<T>).createWildcardChild();
+        curNode = (curNode as StaticNode<T>).createWildcardChild();
         parentNodePathIndex = i + 1;
         if (i !== pattern.length - 1) {
           throw new Error('Wildcard must be the last character in the route');
@@ -131,11 +138,11 @@ export class RadixTree<T> implements Router<T> {
     }
     const paramMap = Object.create(null);
     params.forEach((p, idx) => (paramMap[p] = idx));
-    currentNode.addHandler(method, handler, paramMap);
+    curNode.addHandler(method, handler, paramMap);
   }
 
   match(method: HTTPMethod, path: string): Result<T> {
-    let curNode: any = this.#tree;
+    let curNode: any = this.#trees;
     const originPath = path;
     let pathIndex = curNode.prefix.length;
 
@@ -198,7 +205,7 @@ export class RadixTree<T> implements Router<T> {
   printTree(print: true): void;
   printTree(print?: false): string;
   printTree(print: boolean = true): void | string {
-    const str = prettyPrint(this.#tree);
+    const str = prettyPrint(this.#trees);
     if (print) {
       console.log(str);
       return;

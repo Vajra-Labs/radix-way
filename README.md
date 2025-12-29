@@ -34,12 +34,13 @@
 
 ## Features
 
-- ⚡ **Fast** - 43-118% faster than find-my-way across all route types
-- 🪶 **Lightweight** - Zero dependencies
-- 🎯 **Flexible** - Static, dynamic, wildcard, and regex routes
-- 💾 **Memory Efficient** - 50-78% less memory than find-my-way at scale (500+ routes)
-- 🔧 **TypeScript** - Full type safety
-- 🌲 **Radix Tree** - Single-tree architecture for optimal memory usage
+- ⚡ **High Performance** - Faster than find-my-way across all route types
+- 🪶 **Zero Dependencies** - Minimal footprint, no external packages
+- 🎯 **Flexible Routing** - Supports static, dynamic, wildcard, and regex routes
+- 🎨 **Advanced Patterns** - Multi-parameters, optional params, regex constraints
+- 🔧 **TypeScript Support** - Full type safety with generics
+- 🛠️ **Simple API** - Clean 3-method interface: add, match, printTree
+- 📖 **Well Documented** - Comprehensive examples and guides
 
 ## Table of Contents
 
@@ -65,8 +66,6 @@
   - [Speed Comparison](#speed-comparison)
   - [Memory Usage](#memory-usage-500-routes)
   - [Run Benchmarks](#run-benchmarks)
-- [Architecture](#architecture)
-  - [Single-Tree vs Multi-Tree Design](#single-tree-vs-multi-tree-design)
 - [How It Works](#how-it-works)
 - [Advanced Features](#advanced-features)
   - [Route Constraints](#route-constraints)
@@ -375,14 +374,6 @@ Benchmarked against find-my-way (Node.js v20+):
 | Wildcard Routes     | 20.9M ops/s | 14.0M ops/s | **+50% faster** ✅  |
 | Mixed Workload      | 3.0M ops/s  | 2.1M ops/s  | **+43% faster** ✅  |
 
-**Why is RadixTree faster?**
-
-- **Single-tree architecture** - Path-first approach with methods at leaf nodes
-- **Better prefix compression** - Shared prefixes stored once across all HTTP methods
-- **Dynamic code generation** - Uses `new Function()` to create optimized inline comparisons with zero loop overhead
-- **JIT-friendly** - Generated code is highly optimizable by JavaScript engines (V8/JavaScriptCore)
-- **Lower overhead** - No regex validation or parameter length checks in hot paths
-
 ### Memory Usage (500 routes)
 
 | Router        | RSS Memory  | Heap Used |
@@ -400,46 +391,6 @@ bun run bench      # Speed benchmarks
 bun run memory     # Memory profiling
 ```
 
-## Architecture
-
-### Single-Tree vs Multi-Tree Design
-
-**RadixTree uses a single-tree, path-first architecture:**
-
-- One radix tree for all HTTP methods
-- Methods stored at leaf nodes alongside handlers
-- Optimal for memory efficiency and complex routes
-
-**find-my-way uses multi-tree, method-first architecture:**
-
-- Separate tree for each HTTP method (GET, POST, PUT, etc.)
-- Direct method lookup but slower overall performance
-- Higher memory usage due to tree duplication
-
-**Trade-offs:**
-
-| Aspect                        | RadixTree (Single Tree) | find-my-way (Multi Tree) |
-| ----------------------------- | ----------------------- | ------------------------ |
-| Short static routes           | ✅ Faster (+57%)        | Slower                   |
-| Long/complex routes           | ✅ Faster (+118%)       | Slower                   |
-| Parametric routes             | ✅ Faster (+46%)        | Slower                   |
-| Memory at scale (500+ routes) | ✅ 82% less RSS         | Higher                   |
-| CPU cache locality            | ✅ Excellent            | Good                     |
-| Prefix sharing                | ✅ Excellent            | None (duplicated)        |
-
-**Choose RadixTree when:**
-
-- You need the fastest router overall
-- Building large-scale applications (100+ routes)
-- Memory efficiency matters
-- Routes have complex patterns (long paths, many params)
-
-**Choose find-my-way when:**
-
-- You need advanced features (constraints, versioning)
-- You prefer the method-first architecture
-- Ecosystem compatibility matters
-
 ## How It Works
 
 The router uses a **radix tree** (compressed trie) data structure:
@@ -449,7 +400,6 @@ The router uses a **radix tree** (compressed trie) data structure:
 3. **Dynamic parameters** (`:param`) are handled with parametric nodes
 4. **Wildcards** (`*`) match remaining path segments
 5. **Backtracking** allows multiple route patterns to coexist
-6. **Single tree** stores all methods, reducing memory duplication
 
 Example tree for routes:
 
