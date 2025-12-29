@@ -6,7 +6,7 @@ import {fork} from 'child_process';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const benchmarks = ['radix-tree.js', 'find-my-way.js'];
+const benchmarks = ['radix-tree.js', 'find-my-way.js', 'express.js'];
 
 const queue = new Queue();
 
