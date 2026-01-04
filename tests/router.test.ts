@@ -15,11 +15,11 @@ describe('RadixTree', () => {
       const r1 = router.match('GET', '/users');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('list-users');
-      expect(r1![2]).toEqual([]);
+      expect(r1![2]).toBe(null);
       const r2 = router.match('GET', '/posts');
       expect(r2).not.toBeNull();
       expect(r2![0][0]).toBe('list-posts');
-      expect(r2![2]).toEqual([]);
+      expect(r2![2]).toBe(null);
     });
 
     it('should return empty for non-existent routes', () => {
@@ -156,7 +156,7 @@ describe('RadixTree', () => {
       const r1 = router.match('GET', '/items');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('get-items');
-      expect(r1![2]).toEqual([]);
+      expect(r1![2]).toBe(null); // static route
       const r2 = router.match('GET', '/items/123');
       expect(r2).not.toBeNull();
       expect(r2![0][0]).toBe('get-items');
@@ -214,7 +214,7 @@ describe('RadixTree', () => {
       const r1 = router.match('GET', '/users/me');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('static');
-      expect(r1![2]).toEqual([]);
+      expect(r1![2]).toBe(null); // static route
       const r2 = router.match('GET', '/users/123');
       expect(r2).not.toBeNull();
       expect(r2![0][0]).toBe('param');
@@ -267,7 +267,7 @@ describe('RadixTree', () => {
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
       expect(handlers[0]).toBe('root');
-      expect(params).toEqual([]);
+      expect(params).toBe(null); // static route
     });
 
     it('should handle empty params', () => {
@@ -276,7 +276,7 @@ describe('RadixTree', () => {
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
       expect(handlers[0]).toBe('handler');
-      expect(params).toEqual([]);
+      expect(params).toBe(null); // static route
     });
 
     it('should handle special characters in params', () => {

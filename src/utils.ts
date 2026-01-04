@@ -1,5 +1,50 @@
 import type {StaticNode} from './node';
 
+// Regex cache for performance optimization
+const REGEX_CACHE: Record<string, RegExp> = Object.create(null);
+export const getCachedRegex = (pattern: string): RegExp => {
+  if (!REGEX_CACHE[pattern]) {
+    REGEX_CACHE[pattern] = new RegExp('^' + pattern + '$');
+  }
+  return REGEX_CACHE[pattern];
+};
+
+export const escapeRegExp = (str: string) =>
+  str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+export const trimRegExpStartAndEnd = (regexString: string) => {
+  // Only remove ^ and $ if they are regex anchors, NOT part of character classes
+  // ^ at position 0 (outside brackets) is an anchor
+  // $ at last position (outside brackets) is an anchor
+  if (regexString.charCodeAt(0) === 94) {
+    // ^ at start (anchor)
+    regexString = regexString.slice(1);
+  }
+  if (regexString.charCodeAt(regexString.length - 1) === 36) {
+    // $ at end (anchor)
+    regexString = regexString.slice(0, -1);
+  }
+  return regexString;
+};
+
+export const getClosingBracePosition = (
+  path: string,
+  index: number,
+): number => {
+  let stack = 1;
+  while (index < path.length) {
+    index++;
+    if (path[index] === '\\') {
+      index++;
+      continue;
+    }
+    if (path[index] === '}') stack--;
+    if (path[index] === '{') stack++;
+    if (stack === 0) return index;
+  }
+  throw new TypeError(`Invalid regex in "${path}"`);
+};
+
 export const prettyPrint = <T>(
   node: StaticNode<T>,
   prefix = '',
@@ -55,40 +100,4 @@ export const prettyPrint = <T>(
   });
 
   return result;
-};
-
-export const escapeRegExp = (str: string) =>
-  str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-export const trimRegExpStartAndEnd = (regexString: string) => {
-  // Only remove ^ and $ if they are regex anchors, NOT part of character classes
-  // ^ at position 0 (outside brackets) is an anchor
-  // $ at last position (outside brackets) is an anchor
-  if (regexString.charCodeAt(0) === 94) {
-    // ^ at start (anchor)
-    regexString = regexString.slice(1);
-  }
-  if (regexString.charCodeAt(regexString.length - 1) === 36) {
-    // $ at end (anchor)
-    regexString = regexString.slice(0, -1);
-  }
-  return regexString;
-};
-
-export const getClosingBracePosition = (
-  path: string,
-  index: number,
-): number => {
-  let stack = 1;
-  while (index < path.length) {
-    index++;
-    if (path[index] === '\\') {
-      index++;
-      continue;
-    }
-    if (path[index] === '}') stack--;
-    if (path[index] === '{') stack++;
-    if (stack === 0) return index;
-  }
-  throw new TypeError(`Invalid regex in "${path}"`);
 };

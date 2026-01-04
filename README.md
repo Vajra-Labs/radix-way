@@ -34,8 +34,8 @@
 
 ## Features
 
-- ⚡ **High Performance** - Faster than find-my-way across all route types
-- 🪶 **Zero Dependencies** - Minimal footprint, no external packages
+- ⚡ **High Performance** - Up to 9x faster than find-my-way with optimized radix tree and optional LRU cache
+- 🪶 **Zero Dependencies** - Minimal footprint, no required dependencies (LRU cache is optional)
 - 🎯 **Flexible Routing** - Supports static, dynamic, wildcard, and regex routes
 - 🎨 **Advanced Patterns** - Multi-parameters, optional params, regex constraints
 - 🔗 **Middleware Support** - Multiple handlers per route for middleware chains
@@ -65,9 +65,15 @@
 - [Parameter Mapping](#parameter-mapping)
 - [Performance](#performance)
   - [Speed Comparison](#speed-comparison)
-  - [Memory Usage](#memory-usage-500-routes)
   - [Run Benchmarks](#run-benchmarks)
 - [How It Works](#how-it-works)
+- [LRU Cache (Optional Performance Boost)](#lru-cache-optional-performance-boost)
+  - [Why Use LRU Cache?](#why-use-lru-cache)
+  - [Installation](#installation-1)
+  - [Usage](#usage)
+  - [Performance Impact](#performance-impact)
+  - [Cache Size Guidelines](#cache-size-guidelines)
+  - [When to Use LRU Cache?](#when-to-use-lru-cache)
 - [Advanced Features](#advanced-features)
   - [Middleware Support](#middleware-support)
   - [Route Constraints](#route-constraints)
@@ -209,12 +215,21 @@ router.add('GET', '/api/v:version{\\d+}/users/:id{\\d+}', handler);
 
 ## API
 
-### `new RadixTree<T>()`
+### `new RadixTree<T>(cache?: LRU)`
 
-Create a new router instance.
+Create a new router instance with optional LRU cache for enhanced performance.
+
+**Parameters:**
+
+- `cache` (optional) - LRU cache instance from `tiny-lru` library
 
 ```typescript
+// Without cache
 const router = new RadixTree<Handler>();
+
+// With LRU cache (recommended for production)
+import {lru} from 'tiny-lru';
+const cachedRouter = new RadixTree<Handler>(lru(100));
 ```
 
 ### `add(method: string, path: string, handler: T): void`
@@ -372,7 +387,7 @@ if (result) {
 
 ## Performance
 
-Benchmarked against find-my-way (Node.js v20+):
+Benchmarked against find-my-way (Node.js v24+):
 
 **Test Environment:**
 
@@ -384,29 +399,43 @@ Benchmarked against find-my-way (Node.js v20+):
 
 ### Speed Comparison
 
-| Route Type          | RadixTree   | find-my-way | Performance         |
-| ------------------- | ----------- | ----------- | ------------------- |
-| Short Static Routes | 52.9M ops/s | 33.8M ops/s | **+57% faster** ✅  |
-| Long Static Routes  | 23.8M ops/s | 10.9M ops/s | **+118% faster** ✅ |
-| Parametric Routes   | 12.8M ops/s | 8.8M ops/s  | **+46% faster** ✅  |
-| Wildcard Routes     | 20.9M ops/s | 14.0M ops/s | **+50% faster** ✅  |
-| Mixed Workload      | 3.0M ops/s  | 2.1M ops/s  | **+43% faster** ✅  |
+1. radix-tree (without LRU) vs find-my-way
 
-### Memory Usage (500 routes)
+| Route Type             | radix-tree  | find-my-way | Performance     |
+| ---------------------- | ----------- | ----------- | --------------- |
+| Short Static           | 67.3M ops/s | 48.6M ops/s | +38% faster ⚡  |
+| Static with Same Radix | 57.2M ops/s | 15.5M ops/s | +269% faster 🚀 |
+| Dynamic Route          | 12.2M ops/s | 8.6M ops/s  | +42% faster ✅  |
+| Mixed Static Dynamic   | 11.3M ops/s | 10.6M ops/s | +7% faster ✅   |
+| Long Static            | 70.0M ops/s | 10.9M ops/s | +542% faster 🔥 |
+| Wildcard               | 18.1M ops/s | 13.1M ops/s | +38% faster ⚡  |
+| All Together           | 3.6M ops/s  | 2.1M ops/s  | +71% faster 💪  |
 
-| Router        | RSS Memory  | Heap Used |
-| ------------- | ----------- | --------- |
-| **RadixTree** | **0.53 MB** | **66 KB** |
-| find-my-way   | 2.97 MB     | 141 KB    |
-| **Savings**   | **82%**     | **53%**   |
+2. radix-tree-lru (with LRU) vs find-my-way
+
+| Route Type             | radix-tree-lru | find-my-way | Performance     |
+| ---------------------- | -------------- | ----------- | --------------- |
+| Short Static           | 114.1M ops/s   | 48.6M ops/s | +135% faster 🔥 |
+| Static with Same Radix | 126.6M ops/s   | 15.5M ops/s | +717% faster 🚀 |
+| Dynamic Route          | 80.1M ops/s    | 8.6M ops/s  | +831% faster ⚡ |
+| Mixed Static Dynamic   | 83.7M ops/s    | 10.6M ops/s | +690% faster 💪 |
+| Long Static            | 91.8M ops/s    | 10.9M ops/s | +742% faster 🎯 |
+| Wildcard               | 81.1M ops/s    | 13.1M ops/s | +519% faster ✨ |
+| All Together           | 12.4M ops/s    | 2.1M ops/s  | +490% faster 🏆 |
+
+**Key Highlights:**
+
+- **Static routes** are exceptionally fast due to optimized radix tree structure with O(1) Map lookup
+- **Pre-compiled regex** for dynamic path validation provides significant performance boost
+- **LRU cache** (optional) delivers 2-7x additional speedup across all route types
+- **Consistently faster** than find-my-way in all scenarios, from +7% to +831% improvement
 
 ### Run Benchmarks
 
 ```bash
 cd bench
 bun install
-bun run bench      # Speed benchmarks
-bun run memory     # Memory profiling
+bun run bench
 ```
 
 ## How It Works
@@ -419,19 +448,69 @@ The router uses a **radix tree** (compressed trie) data structure:
 4. **Wildcards** (`*`) match remaining path segments
 5. **Backtracking** allows multiple route patterns to coexist
 
-Example tree for routes:
+## LRU Cache (Optional Performance Boost)
 
-- `GET /users`
-- `GET /users/:id`
-- `POST /users/:id/posts`
+Enable LRU (Least Recently Used) caching for maximum performance in production applications.
 
+### Why Use LRU Cache?
+
+- **2-7x faster** route matching after first access
+- Perfect for applications with repeated route patterns
+- Minimal memory overhead with configurable cache size
+- Especially beneficial for dynamic routes
+
+### Installation
+
+```bash
+npm install tiny-lru
+# or
+bun add tiny-lru
 ```
-/
-└── users
-    ├── [GET] → handler
-    └── :id [param]
-        ├── [GET] → handler
-        └── /posts [POST] → handler
+
+### Usage
+
+```typescript
+import {lru} from 'tiny-lru';
+import {RadixTree} from 'radix-way';
+
+// Create router with LRU cache (cache size: 100 routes)
+const router = new RadixTree(lru(100));
+
+router.add('GET', '/users/:id', handler);
+router.add('GET', '/posts/:slug', handler);
+
+// First match: normal speed
+router.match('GET', '/users/123');
+
+// Subsequent matches: 2-7x faster (cached!)
+router.match('GET', '/users/123');
+router.match('GET', '/users/456'); // Different params, same route pattern → cached
+```
+
+### Performance Impact
+
+Based on benchmarks, LRU cache provides:
+
+| Route Type             | Without LRU | With LRU     | Speedup |
+| ---------------------- | ----------- | ------------ | ------- |
+| Short Static           | 67.3M ops/s | 114.1M ops/s | 1.7x    |
+| Static with Same Radix | 57.2M ops/s | 126.6M ops/s | 2.2x    |
+| Dynamic Route          | 12.2M ops/s | 80.1M ops/s  | 6.6x    |
+| Mixed Static Dynamic   | 11.3M ops/s | 83.7M ops/s  | 7.4x    |
+| Long Static            | 70.0M ops/s | 91.8M ops/s  | 1.3x    |
+| Wildcard               | 18.1M ops/s | 81.1M ops/s  | 4.5x    |
+
+### Cache Size Guidelines
+
+```typescript
+// Small app (< 50 routes)
+const router = new RadixTree(lru(50));
+
+// Medium app (50-200 routes)
+const router = new RadixTree(lru(150));
+
+// Large app (200+ routes)
+const router = new RadixTree(lru(500));
 ```
 
 ## Advanced Features
@@ -693,9 +772,18 @@ router.match('GET', '/file/data.pdf'); // ❌ null
 
 ## Debugging
 
-Print the router tree:
+Print the router tree to visualize route structure:
 
 ```typescript
+const router = new RadixTree();
+
+// Add some routes
+router.add('GET', '/users', handler);
+router.add('GET', '/about', handler);
+router.add('GET', '/users/:id', handler);
+router.add('POST', '/users/:id/posts', handler);
+router.add('GET', '/static/*', handler);
+
 // Print to console
 router.printTree();
 
@@ -707,28 +795,30 @@ console.log(tree);
 Output:
 
 ```
-/
-├── users
-│   ├── [GET] → handler
-│   └── :id
-│       └── [GET] → handler
-└── static
-    └── *
-        └── [GET] → handler
+┌─ Static Routes (Map)
+│  /users [GET]
+│  /about [GET]
+│
+└─ Dynamic Routes (Tree)
+   /
+   ├─ users/
+   │  └─ :id [GET]
+   │     └─ /posts [POST]
+   └─ static/
+      └─ * [GET]
 ```
 
 ## What's Different from find-my-way?
 
 While both routers use radix trees, there are key architectural differences:
 
-| Feature              | RadixTree                       | find-my-way                       |
-| -------------------- | ------------------------------- | --------------------------------- |
-| Tree Structure       | Single tree (path-first)        | Multiple trees (method-first)     |
-| Memory at 500 routes | 66 KB heap (0.53 MB RSS)        | 141 KB heap (2.97 MB RSS)         |
-| Performance          | 43-118% faster across all types | Baseline                          |
-| Optimization         | Dynamic code generation         | Loop-based matching               |
-| Best For             | All applications                | Advanced routing features         |
-| Route Registration   | Multiple handlers (middleware)  | Supports constraints & versioning |
+| Feature            | RadixTree                         | find-my-way                       |
+| ------------------ | --------------------------------- | --------------------------------- |
+| Tree Structure     | Single tree (path-first)          | Multiple trees (method-first)     |
+| Performance        | 7-831% faster (with optional LRU) | Baseline                          |
+| Optimization       | Pre-compiled regex + Map lookup   | Loop-based matching               |
+| Best For           | All applications                  | Advanced routing features         |
+| Route Registration | Multiple handlers (middleware)    | Supports constraints & versioning |
 
 **Migration from find-my-way:**
 

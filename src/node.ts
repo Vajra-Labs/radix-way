@@ -15,10 +15,10 @@ export class Node<T> {
   addHandler(method: HTTPMethod, handler: T, paramMap: ParamIndexMap): void {
     if (this.handlers === null) this.handlers = Object.create(null);
     this.isLeafNode = true;
-    if (this.handlers[method]) {
+    if (this.handlers?.[method]) {
       this.handlers[method][0].push(handler);
     } else {
-      this.handlers[method] = [[handler], paramMap];
+      this.handlers![method] = [[handler], paramMap, null];
     }
   }
 }
@@ -35,14 +35,6 @@ export class ParentNode<T> extends Node<T> {
     if (!child) return null;
     if (!child.matchPrefix(path, pathIndex)) return null;
     return child;
-  }
-
-  getStaticChild(path: string, pathIndex = 0): StaticNode<T> | null {
-    if (path.length === pathIndex) return this as unknown as StaticNode<T>;
-    const child = this.findStaticMatchingChild(path, pathIndex);
-    if (child)
-      return child.getStaticChild(path, pathIndex + child.prefix.length);
-    return null;
   }
 
   createStaticChild(path: string): StaticNode<T> {

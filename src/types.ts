@@ -1,5 +1,13 @@
+/**
+ * Special method name that matches all HTTP methods.
+ */
 export const METHOD_NAME_ALL = 'ALL' as const;
 
+/**
+ * Generic router interface.
+ *
+ * @typeParam T - The handler type stored for each route.
+ */
 export interface Router<T> {
   /**
    * Registers a new route.
@@ -39,50 +47,62 @@ export interface Router<T> {
   printTree(print?: boolean): void | string;
 }
 
+/**
+ * Ordered list of parameter values captured during route matching.
+ *
+ * Indices correspond to entries in {@link ParamIndexMap}.
+ */
 export type ParamStash = string[];
 
+/**
+ * Maps parameter names to their index in the {@link ParamStash}.
+ *
+ * Example: `{ id: 0, slug: 1 }`
+ */
 export type ParamIndexMap = Record<string, number>;
 
+/**
+ * Key-value mapping of route parameters by name.
+ *
+ * Example: `{ id: "42", slug: "hello-world" }`
+ */
 export type Params = Record<string, string>;
 
-export type Result<T> = [T[], ParamIndexMap, ParamStash] | null;
+/**
+ * Result of a route match attempt.
+ *
+ * - `HandlerSet<T>` when a route matches
+ * - `null` when no route matches
+ */
+export type Result<T> = HandlerSet<T> | null;
 
-export type HandlerSet<T> = [T[], ParamIndexMap];
+/**
+ * A matched handler set with optional parameter metadata.
+ *
+ * Tuple structure:
+ * 1. Array of matched handlers
+ * 2. Parameter index map (or `null` if no params)
+ * 3. Parameter value stash (or `null` if no params)
+ */
+export type HandlerSet<T> = [T[], ParamIndexMap | null, ParamStash | null];
 
+/**
+ * Supported HTTP methods.
+ *
+ * Includes all standard, WebDAV, and extension methods,
+ * plus `ALL` for method-agnostic routes.
+ *
+ * Allows custom methods via string extension.
+ */
+// prettier-ignore
 export type HTTPMethod =
-  | 'ACL'
-  | 'BIND'
-  | 'CHECKOUT'
-  | 'CONNECT'
-  | 'COPY'
-  | 'DELETE'
-  | 'GET'
-  | 'HEAD'
-  | 'LINK'
-  | 'LOCK'
-  | 'M-SEARCH'
-  | 'MERGE'
-  | 'MKACTIVITY'
-  | 'MKCALENDAR'
-  | 'MKCOL'
-  | 'MOVE'
-  | 'NOTIFY'
-  | 'OPTIONS'
-  | 'PATCH'
-  | 'POST'
-  | 'PROPFIND'
-  | 'PROPPATCH'
-  | 'PURGE'
-  | 'PUT'
-  | 'REBIND'
-  | 'REPORT'
-  | 'SEARCH'
-  | 'SOURCE'
-  | 'SUBSCRIBE'
-  | 'TRACE'
-  | 'UNBIND'
-  | 'UNLINK'
-  | 'UNLOCK'
-  | 'UNSUBSCRIBE'
+  | 'ACL' | 'BIND' | 'CHECKOUT' | 'CONNECT' | 'COPY'
+  | 'DELETE' | 'GET' | 'HEAD' | 'LINK' | 'LOCK'
+  | 'M-SEARCH' | 'MERGE' | 'MKACTIVITY' | 'MKCALENDAR' | 'MKCOL'
+  | 'MOVE' | 'NOTIFY' | 'OPTIONS' | 'PATCH' | 'POST'
+  | 'PROPFIND' | 'PROPPATCH' | 'PURGE' | 'PUT'
+  | 'REBIND' | 'REPORT' | 'SEARCH' | 'SOURCE'
+  | 'SUBSCRIBE' | 'TRACE' | 'UNBIND' | 'UNLINK'
+  | 'UNLOCK' | 'UNSUBSCRIBE'
   | 'ALL'
   | (string & {});
