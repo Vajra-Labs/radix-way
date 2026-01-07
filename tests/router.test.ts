@@ -10,8 +10,8 @@ describe('RadixTree', () => {
     });
 
     it('should match static routes', () => {
-      router.add('GET', '/users', 'list-users');
-      router.add('GET', '/posts', 'list-posts');
+      router.insert('GET', '/users', 'list-users');
+      router.insert('GET', '/posts', 'list-posts');
       const r1 = router.match('GET', '/users');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('list-users');
@@ -23,7 +23,7 @@ describe('RadixTree', () => {
     });
 
     it('should return empty for non-existent routes', () => {
-      router.add('GET', '/users', 'handler');
+      router.insert('GET', '/users', 'handler');
       expect(router.match('GET', '/posts')).toBeNull();
       expect(router.match('POST', '/users')).toBeNull();
     });
@@ -37,7 +37,7 @@ describe('RadixTree', () => {
     });
 
     it('should match simple parametric routes', () => {
-      router.add('GET', '/users/:id', 'get-user');
+      router.insert('GET', '/users/:id', 'get-user');
       const result = router.match('GET', '/users/123');
       expect(result).not.toBeNull();
       const [handlers, paramMap, params] = result!;
@@ -47,7 +47,7 @@ describe('RadixTree', () => {
     });
 
     it('should match multiple parameters', () => {
-      router.add('GET', '/users/:userId/posts/:postId', 'get-post');
+      router.insert('GET', '/users/:userId/posts/:postId', 'get-post');
       const result = router.match('GET', '/users/42/posts/99');
       expect(result).not.toBeNull();
       const [handlers, paramMap, params] = result!;
@@ -65,7 +65,7 @@ describe('RadixTree', () => {
     });
 
     it('should match regex parameters', () => {
-      router.add('GET', '/posts/:id{\\d+}', 'get-post-by-id');
+      router.insert('GET', '/posts/:id{\\d+}', 'get-post-by-id');
       const result = router.match('GET', '/posts/123');
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
@@ -75,8 +75,8 @@ describe('RadixTree', () => {
     });
 
     it('should match different regex patterns', () => {
-      router.add('GET', '/posts/:id{\\d+}', 'numeric');
-      router.add('GET', '/posts/:slug{[a-z-]+}', 'slug');
+      router.insert('GET', '/posts/:id{\\d+}', 'numeric');
+      router.insert('GET', '/posts/:slug{[a-z-]+}', 'slug');
       const r1 = router.match('GET', '/posts/123');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('numeric');
@@ -96,7 +96,7 @@ describe('RadixTree', () => {
     });
 
     it('should match multi-parameters with dash', () => {
-      router.add('GET', '/at/:hour-:minute', 'get-time');
+      router.insert('GET', '/at/:hour-:minute', 'get-time');
       const result = router.match('GET', '/at/14-30');
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
@@ -105,7 +105,7 @@ describe('RadixTree', () => {
     });
 
     it('should match multi-parameters with dot', () => {
-      router.add('GET', '/file.:name.:ext', 'get-file');
+      router.insert('GET', '/file.:name.:ext', 'get-file');
       const result = router.match('GET', '/file.readme.md');
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
@@ -122,7 +122,7 @@ describe('RadixTree', () => {
     });
 
     it('should match static suffix', () => {
-      router.add('GET', '/file.:ext', 'get-file');
+      router.insert('GET', '/file.:ext', 'get-file');
       const r1 = router.match('GET', '/file.pdf');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('get-file');
@@ -134,7 +134,7 @@ describe('RadixTree', () => {
     });
 
     it('should match param with static suffix', () => {
-      router.add('GET', '/image-:id.png', 'get-image');
+      router.insert('GET', '/image-:id.png', 'get-image');
       const result = router.match('GET', '/image-42.png');
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
@@ -152,7 +152,7 @@ describe('RadixTree', () => {
     });
 
     it('should match with and without optional param', () => {
-      router.add('GET', '/items/:id?', 'get-items');
+      router.insert('GET', '/items/:id?', 'get-items');
       const r1 = router.match('GET', '/items');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('get-items');
@@ -172,7 +172,7 @@ describe('RadixTree', () => {
     });
 
     it('should match wildcard routes', () => {
-      router.add('GET', '/files/*', 'serve-file');
+      router.insert('GET', '/files/*', 'serve-file');
       const r1 = router.match('GET', '/files/docs/readme.md');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('serve-file');
@@ -192,7 +192,7 @@ describe('RadixTree', () => {
     });
 
     it('should handle double colon as single colon', () => {
-      router.add('GET', '/name::customVerb', 'custom');
+      router.insert('GET', '/name::customVerb', 'custom');
       const result = router.match('GET', '/name:customVerb');
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
@@ -209,8 +209,8 @@ describe('RadixTree', () => {
     });
 
     it('should prioritize static over parametric', () => {
-      router.add('GET', '/users/:id', 'param');
-      router.add('GET', '/users/me', 'static');
+      router.insert('GET', '/users/:id', 'param');
+      router.insert('GET', '/users/me', 'static');
       const r1 = router.match('GET', '/users/me');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('static');
@@ -222,8 +222,8 @@ describe('RadixTree', () => {
     });
 
     it('should prioritize parametric over wildcard', () => {
-      router.add('GET', '/files/*', 'wildcard');
-      router.add('GET', '/files/:id', 'param');
+      router.insert('GET', '/files/*', 'wildcard');
+      router.insert('GET', '/files/:id', 'param');
       const r1 = router.match('GET', '/files/123');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('param');
@@ -243,10 +243,10 @@ describe('RadixTree', () => {
     });
 
     it('should handle different HTTP methods', () => {
-      router.add('GET', '/users', 'get');
-      router.add('POST', '/users', 'post');
-      router.add('PUT', '/users', 'put');
-      router.add('DELETE', '/users', 'delete');
+      router.insert('GET', '/users', 'get');
+      router.insert('POST', '/users', 'post');
+      router.insert('PUT', '/users', 'put');
+      router.insert('DELETE', '/users', 'delete');
       expect(router.match('GET', '/users')![0][0]).toBe('get');
       expect(router.match('POST', '/users')![0][0]).toBe('post');
       expect(router.match('PUT', '/users')![0][0]).toBe('put');
@@ -262,7 +262,7 @@ describe('RadixTree', () => {
     });
 
     it('should handle root path', () => {
-      router.add('GET', '/', 'root');
+      router.insert('GET', '/', 'root');
       const result = router.match('GET', '/');
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
@@ -271,7 +271,7 @@ describe('RadixTree', () => {
     });
 
     it('should handle empty params', () => {
-      router.add('GET', '/users', 'handler');
+      router.insert('GET', '/users', 'handler');
       const result = router.match('GET', '/users');
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
@@ -280,7 +280,7 @@ describe('RadixTree', () => {
     });
 
     it('should handle special characters in params', () => {
-      router.add('GET', '/users/:id', 'handler');
+      router.insert('GET', '/users/:id', 'handler');
       const result = router.match('GET', '/users/user-123');
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
@@ -297,7 +297,7 @@ describe('RadixTree', () => {
     });
 
     it('should match ALL for any method', () => {
-      router.add('ALL', '/api', 'all-handler');
+      router.insert('ALL', '/api', 'all-handler');
       const getRes = router.match('GET', '/api');
       expect(getRes).not.toBeNull();
       expect(getRes![0][0]).toBe('all-handler');
@@ -310,8 +310,8 @@ describe('RadixTree', () => {
     });
 
     it('should prefer specific method over ALL', () => {
-      router.add('ALL', '/api', 'all-handler');
-      router.add('GET', '/api', 'get-handler');
+      router.insert('ALL', '/api', 'all-handler');
+      router.insert('GET', '/api', 'get-handler');
       const getRes = router.match('GET', '/api');
       expect(getRes).not.toBeNull();
       expect(getRes![0][0]).toBe('get-handler');
@@ -321,7 +321,7 @@ describe('RadixTree', () => {
     });
 
     it('should work with ALL and parametric routes', () => {
-      router.add('ALL', '/users/:id', 'all-user');
+      router.insert('ALL', '/users/:id', 'all-user');
       const result = router.match('DELETE', '/users/123');
       expect(result).not.toBeNull();
       const [handlers, , params] = result!;
@@ -338,7 +338,7 @@ describe('RadixTree', () => {
     });
 
     it('should match multiple regex params in single route', () => {
-      router.add(
+      router.insert(
         'GET',
         '/users/:userId{\\d+}/posts/:postId{[a-f0-9]+}',
         'user-post',
@@ -360,7 +360,7 @@ describe('RadixTree', () => {
     });
 
     it('should match regex with static suffix combination', () => {
-      router.add(
+      router.insert(
         'GET',
         '/api/v:version{\\d+}/users/:id{[0-9a-f]{8}}',
         'versioned-api',
@@ -379,7 +379,7 @@ describe('RadixTree', () => {
     });
 
     it('should match date pattern with multiple separators', () => {
-      router.add(
+      router.insert(
         'GET',
         '/time/:year{\\d{4}}-:month{\\d{2}}-:day{\\d{2}}',
         'date',
@@ -398,7 +398,11 @@ describe('RadixTree', () => {
     });
 
     it('should match slug pattern with hyphens', () => {
-      router.add('GET', '/blog/:slug{[a-z0-9]+(?:-[a-z0-9]+)*}', 'blog-post');
+      router.insert(
+        'GET',
+        '/blog/:slug{[a-z0-9]+(?:-[a-z0-9]+)*}',
+        'blog-post',
+      );
       const r1 = router.match('GET', '/blog/hello-world');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('blog-post');
@@ -413,7 +417,7 @@ describe('RadixTree', () => {
     });
 
     it('should match file extension with alternation', () => {
-      router.add(
+      router.insert(
         'GET',
         '/files/:name{[a-zA-Z0-9_-]+}.:ext{json|xml|txt}',
         'file-handler',
@@ -436,7 +440,7 @@ describe('RadixTree', () => {
     });
 
     it('should match UUID pattern', () => {
-      router.add(
+      router.insert(
         'GET',
         '/resources/:uuid{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}',
         'uuid-resource',
@@ -454,7 +458,11 @@ describe('RadixTree', () => {
     });
 
     it('should match IP address pattern', () => {
-      router.add('GET', '/server/:ip{(?:\\d{1,3}\\.){3}\\d{1,3}}', 'server-ip');
+      router.insert(
+        'GET',
+        '/server/:ip{(?:\\d{1,3}\\.){3}\\d{1,3}}',
+        'server-ip',
+      );
       const r1 = router.match('GET', '/server/192.168.1.1');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('server-ip');
@@ -469,8 +477,8 @@ describe('RadixTree', () => {
     });
 
     it('should prioritize regex over simple param', () => {
-      router.add('GET', '/mixed/:id', 'simple-param');
-      router.add('GET', '/mixed/:id{\\d+}', 'regex-param');
+      router.insert('GET', '/mixed/:id', 'simple-param');
+      router.insert('GET', '/mixed/:id{\\d+}', 'regex-param');
 
       const r1 = router.match('GET', '/mixed/123');
       expect(r1).not.toBeNull();
@@ -484,8 +492,8 @@ describe('RadixTree', () => {
     });
 
     it('should handle backtracking with complex patterns', () => {
-      router.add('GET', '/bt/:a{\\d+}-:b{\\d+}', 'two-numbers');
-      router.add('GET', '/bt/:text', 'simple-text');
+      router.insert('GET', '/bt/:a{\\d+}-:b{\\d+}', 'two-numbers');
+      router.insert('GET', '/bt/:text', 'simple-text');
 
       const r1 = router.match('GET', '/bt/12-34');
       expect(r1).not.toBeNull();
@@ -504,7 +512,7 @@ describe('RadixTree', () => {
     });
 
     it('should match email pattern', () => {
-      router.add(
+      router.insert(
         'GET',
         '/user/:email{[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}}',
         'user-email',
@@ -523,7 +531,7 @@ describe('RadixTree', () => {
     });
 
     it('should match hex color pattern', () => {
-      router.add('GET', '/color/:hex{#[0-9a-fA-F]{6}}', 'hex-color');
+      router.insert('GET', '/color/:hex{#[0-9a-fA-F]{6}}', 'hex-color');
       const r1 = router.match('GET', '/color/#FF5733');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('hex-color');
@@ -538,7 +546,7 @@ describe('RadixTree', () => {
     });
 
     it('should match semantic version pattern', () => {
-      router.add('GET', '/package/:version{\\d+\\.\\d+\\.\\d+}', 'semver');
+      router.insert('GET', '/package/:version{\\d+\\.\\d+\\.\\d+}', 'semver');
       const r1 = router.match('GET', '/package/1.2.3');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('semver');
@@ -553,7 +561,7 @@ describe('RadixTree', () => {
     });
 
     it('should handle deeply nested static paths', () => {
-      router.add('GET', '/a/b/c/d/e/f/:id{\\d+}', 'deep-nested');
+      router.insert('GET', '/a/b/c/d/e/f/:id{\\d+}', 'deep-nested');
       const r1 = router.match('GET', '/a/b/c/d/e/f/123');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('deep-nested');
@@ -564,7 +572,7 @@ describe('RadixTree', () => {
     });
 
     it('should match domain-like pattern with dots', () => {
-      router.add('GET', '/proxy/:subdomain.:domain.:tld', 'proxy');
+      router.insert('GET', '/proxy/:subdomain.:domain.:tld', 'proxy');
       const r1 = router.match('GET', '/proxy/www.example.com');
       expect(r1).not.toBeNull();
       expect(r1![0][0]).toBe('proxy');
@@ -576,7 +584,7 @@ describe('RadixTree', () => {
     });
 
     it('should handle complex alternation patterns', () => {
-      router.add(
+      router.insert(
         'GET',
         '/media/:type{image|video|audio}/:id{\\d+}',
         'media-handler',

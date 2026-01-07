@@ -82,7 +82,9 @@ const routes = [
 ];
 
 const rt = new RadixTree<string>();
-routes.forEach(([method, path, handler]) => rt.add(method, path, handler));
+routes.forEach(([method, path, handler]) =>
+  rt.insert(method as any, path as any, handler as any),
+);
 
 console.log('🌲 Router Tree Structure:\n');
 rt.printTree();

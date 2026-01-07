@@ -9,29 +9,33 @@ export const NODE_TYPES = {
 export type NodeType = (typeof NODE_TYPES)[keyof typeof NODE_TYPES];
 
 export class Node<T> {
-  handlers: Record<string, HandlerSet<T>> | null = null;
+  handlers?: Record<HTTPMethod, HandlerSet<T>>;
   isLeafNode = false;
 
   addHandler(method: HTTPMethod, handler: T, paramMap: ParamIndexMap): void {
-    if (this.handlers === null) this.handlers = Object.create(null);
-    this.isLeafNode = true;
-    if (this.handlers?.[method]) {
-      this.handlers[method][0].push(handler);
+    let handlers = this.handlers;
+    if (!handlers) {
+      handlers = this.handlers = Object.create(null);
+      this.isLeafNode = true;
+    }
+    const existing = handlers![method];
+    if (existing) {
+      existing[0].push(handler);
     } else {
-      this.handlers![method] = [[handler], paramMap, null];
+      handlers![method] = [[handler], paramMap, null];
     }
   }
 }
 
 export class ParentNode<T> extends Node<T> {
-  staticChildren: Record<string, StaticNode<T>> = Object.create(null);
+  staticChildren = new Map<string, StaticNode<T>>();
 
   findStaticMatchingChild(
     path: string,
     pathIndex: number,
   ): StaticNode<T> | null {
     if (pathIndex >= path.length) return null;
-    const child = this.staticChildren[path[pathIndex]];
+    const child = this.staticChildren.get(path[pathIndex]!);
     if (!child) return null;
     if (!child.matchPrefix(path, pathIndex)) return null;
     return child;
@@ -40,8 +44,8 @@ export class ParentNode<T> extends Node<T> {
   createStaticChild(path: string): StaticNode<T> {
     if (path.length === 0) return this as unknown as StaticNode<T>;
 
-    const first = path[0];
-    let child = this.staticChildren[first];
+    const first = path[0]!;
+    let child = this.staticChildren.get(first);
     if (child) {
       let i = 1;
       const cl = child.prefix.length;
@@ -60,7 +64,7 @@ export class ParentNode<T> extends Node<T> {
     }
 
     const n = new StaticNode<T>(path);
-    this.staticChildren[first] = n;
+    this.staticChildren.set(first, n);
     return n;
   }
 }
@@ -82,9 +86,9 @@ export class StaticNode<T> extends ParentNode<T> {
     const src = regex ? regex.source : null;
     const arr = this.parametricChildren;
     for (let i = 0; i < arr.length; i++) {
-      const c = arr[i];
-      const cs = c.regex ? c.regex.source : null;
-      if (cs === src) return c;
+      const c = arr[i]!;
+      const cs = c!.regex ? c!.regex.source : null;
+      if (cs === src) return c!;
     }
     return null;
   }
@@ -114,7 +118,7 @@ export class StaticNode<T> extends ParentNode<T> {
       if (a.staticSuffix!.endsWith(b.staticSuffix!)) return -1;
       return 0;
     }
-    while (i > 0 && cmp(arr[i - 1], child) > 0) i--;
+    while (i > 0 && cmp(arr[i - 1]!, child) > 0) i--;
     arr.splice(i, 0, child);
     return child;
   }
@@ -137,8 +141,8 @@ export class StaticNode<T> extends ParentNode<T> {
     this.matchPrefix = this.compile(childPrefix);
 
     const staticNode = new StaticNode<T>(parentPrefix);
-    staticNode.staticChildren[childPrefix[0]] = this;
-    parent.staticChildren[parentPrefix[0]] = staticNode;
+    staticNode.staticChildren.set(childPrefix[0]!, this);
+    parent.staticChildren.set(parentPrefix[0]!, staticNode);
     return staticNode;
   }
 
@@ -154,7 +158,7 @@ export class StaticNode<T> extends ParentNode<T> {
 
     if (node === null) {
       if (this.parametricChildren.length === 0) return this.wildcardChild;
-      node = this.parametricChildren[0];
+      node = this.parametricChildren[0]!;
       parametricBrotherIndex = 1;
     }
 

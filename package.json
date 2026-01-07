@@ -1,6 +1,6 @@
 {
   "name": "radix-way",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
   "files": [
     "dist"
@@ -40,7 +40,6 @@
     "eslint-plugin-prettier": "^5.5.4",
     "globals": "^16.5.0",
     "prettier": "^3.7.4",
-    "tiny-lru": "^11.4.5",
     "tsdown": "^0.15.12",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.51.0",

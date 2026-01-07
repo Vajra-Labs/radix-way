@@ -1,4 +1,3 @@
-export {RadixTree} from './router';
 export type {
   HTTPMethod,
   HandlerSet,
@@ -8,3 +7,5 @@ export type {
   Result,
   Router,
 } from './types';
+export {RadixTree} from './router';
+export {routeToRegExp} from './utils';

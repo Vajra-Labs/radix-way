@@ -3,8 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "bench": "node ./src/runner.js",
-    "memory": "node --expose-gc src/memory.js"
+    "bench": "node ./src/runner.js"
   },
   "devDependencies": {
     "@types/bun": "latest"

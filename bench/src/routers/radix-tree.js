@@ -26,7 +26,7 @@ let i = 0;
 let time = 0;
 
 routes.forEach(route => {
-  router.add(route.method, route.url, noop);
+  router.insert(route.method, route.url, noop);
 });
 
 time = now();

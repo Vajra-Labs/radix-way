@@ -16,7 +16,7 @@ export interface Router<T> {
    * @param path - The route path pattern (e.g., '/users/:id').
    * @param handler - The handler associated with the route.
    */
-  add(method: HTTPMethod, path: string, handler: T): void;
+  insert(method: HTTPMethod, path: string, handler: T): void;
 
   /**
    * Attempts to match a route for the given method and path.

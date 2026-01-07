@@ -1,5 +1,5 @@
 import http from 'http';
-import {RadixTree} from './dist/index.js';
+import {RadixTree} from './src/index';
 
 type Req = http.IncomingMessage;
 type Res = http.ServerResponse<http.IncomingMessage> & {
@@ -9,21 +9,25 @@ type Handler = (req: Req, res: Res) => void;
 
 const router = new RadixTree<Handler>();
 
-router.add('ALL', '/', (_req, res) => {
+router.insert('ALL', '/', (_req, res) => {
   res.end('Welcome to Radix Way!');
 });
 
-router.add('GET', '/json', (_req, res) => {
+router.insert('GET', '/json', (_req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({message: 'Hello World'}));
 });
 
-router.add('POST', '/users/:id', (req, res) => {
+router.insert('POST', '/users/:id', (req, res) => {
   const result = router.match(req.method!, req.url!);
   const [, paramMap, params] = result!;
-  const userId = params[paramMap.id];
+  const userId = params?.[paramMap?.id!];
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({userId, name: `User ${userId}`}));
+});
+
+router.insert('ALL', '/*', (_req, res) => {
+  res.end('Page Not Found!');
 });
 
 const app = http.createServer((req, res) => {
@@ -34,7 +38,7 @@ const app = http.createServer((req, res) => {
     return;
   }
   const [handlers] = result;
-  handlers[0](req, res);
+  handlers?.[0]?.(req, res);
 });
 
 app.listen(3000, () => {

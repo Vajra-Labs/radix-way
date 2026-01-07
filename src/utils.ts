@@ -74,7 +74,7 @@ export const prettyPrint = <T>(
   const children: [string, any][] = [];
 
   if (node.staticChildren) {
-    for (const child of Object.values(node.staticChildren)) {
+    for (const child of node.staticChildren.values()) {
       children.push([child.prefix, child]);
     }
   }
@@ -100,4 +100,56 @@ export const prettyPrint = <T>(
   });
 
   return result;
+};
+
+export const routeToRegExp = (
+  pattern: string,
+): [RegExp, Record<string, number>] => {
+  let i = 0,
+    paramIndex = 0;
+  const paramMap = Object.create(null);
+  const parts: string[] = [];
+
+  while (i < pattern.length) {
+    const char = pattern[i];
+    // PARAM
+    if (char === ':') {
+      i++;
+      const start = i;
+      while (
+        i < pattern.length &&
+        pattern.charCodeAt(i) !== 45 && // -
+        pattern.charCodeAt(i) !== 46 && // .
+        pattern.charCodeAt(i) !== 47 && // /
+        pattern.charCodeAt(i) !== 123 // {
+      ) {
+        i++;
+      }
+      const name = pattern.slice(start, i);
+      paramMap[name] = paramIndex++;
+      if (pattern[i] === '{') {
+        const end = getClosingBracePosition(pattern, i);
+        const rgx = pattern.slice(i + 1, end);
+        parts.push('(' + trimRegExpStartAndEnd(rgx) + ')');
+        i = end + 1;
+      } else {
+        parts.push('([^/]+)');
+      }
+      continue;
+    }
+    // WILDCARD
+    if (char === '*') {
+      if (i !== pattern.length - 1)
+        throw new Error('Wildcard "*" must be the last character in the route');
+      paramMap['*'] = paramIndex++;
+      parts.push('(.*)');
+      i++;
+      continue;
+    }
+    // STATIC CHAR (including '/')
+    parts.push(escapeRegExp(char!));
+    i++;
+  }
+  const source = '^' + parts.join('') + '$';
+  return [getCachedRegex(source), paramMap];
 };

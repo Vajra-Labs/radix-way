@@ -6,11 +6,9 @@ import {
   prettyPrint,
 } from './utils';
 import assert from 'node:assert';
-import type {LRU} from 'tiny-lru';
 import {METHOD_NAME_ALL} from './types';
 import {NODE_TYPES, StaticNode} from './node';
 import type {Result, Router, HTTPMethod} from './types';
-import type {WildcardNode, ParametricNode} from './node';
 
 const OPTIONAL_PARAM_REGEXP = /(\/:[^/{}]*?)\?(\/?)/;
 
@@ -18,27 +16,19 @@ const OPTIONAL_PARAM_REGEXP = /(\/:[^/{}]*?)\?(\/?)/;
 const DYNAMIC_ROUTE_REGEX = /[:*]/;
 
 // Check if path is static (no : or * characters)
-const isStaticPath = (path: string): boolean => !DYNAMIC_ROUTE_REGEX.test(path);
+const isStaticPath = (path: string) => !DYNAMIC_ROUTE_REGEX.test(path);
 
 export class RadixTree<T> implements Router<T> {
   #trees: StaticNode<T> = new StaticNode<T>('/');
   #static = new Map<string, Record<string, Result<T>>>();
-  #cache?: LRU<any> = undefined;
 
-  constructor(lrucache?: LRU<any>) {
-    this.#cache = lrucache;
-  }
-
-  add(method: HTTPMethod, path: string, handler: T): void {
-    // Path validation
-    assert(typeof path === 'string', 'Path should be a string');
-    assert(path.length > 0, 'The path could not be empty');
+  insert(method: HTTPMethod, path: string, handler: T): void {
     assert(
       path[0] === '/' || path[0] === '*',
       'The first character of a path should be `/` or `*`',
     );
 
-    // Fast path: Static routes (no : or *) → Map for O(1) lookup
+    // Static routes - O(1) Map storage
     if (isStaticPath(path)) {
       if (!this.#static.has(path)) {
         this.#static.set(path, {
@@ -55,7 +45,7 @@ export class RadixTree<T> implements Router<T> {
       return;
     }
 
-    // Dynamic routes
+    // Handle optional params (:param?)
     const optional = path.match(OPTIONAL_PARAM_REGEXP);
     if (optional) {
       assert(
@@ -64,15 +54,15 @@ export class RadixTree<T> implements Router<T> {
       );
       const fullPath = path.replace(OPTIONAL_PARAM_REGEXP, '$1$2');
       const optionalPath = path.replace(OPTIONAL_PARAM_REGEXP, '$2') || '/';
-      this.add(method, fullPath, handler);
-      this.add(method, optionalPath, handler);
+      this.insert(method, fullPath, handler);
+      this.insert(method, optionalPath, handler);
       return;
     }
-    // Insert value in tree
+
+    // Dynamic route insertion
     let pattern = path;
-    let curNode: StaticNode<T> | ParametricNode<T> | WildcardNode<T> =
-      this.#trees;
-    let parentNodePathIndex = (curNode as StaticNode<T>).prefix.length;
+    let curNode: any = this.#trees;
+    let parentNodePathIndex = curNode.prefix.length;
     const params: string[] = [];
     for (let i = 0; i <= pattern.length; i++) {
       const isParametricNode = pattern.charCodeAt(i) === 58; // :
@@ -83,12 +73,12 @@ export class RadixTree<T> implements Router<T> {
         (i === pattern.length && i !== parentNodePathIndex)
       ) {
         const staticNodePath = pattern.slice(parentNodePathIndex, i);
-        curNode = (curNode as StaticNode<T>).createStaticChild(staticNodePath);
+        curNode = curNode.createStaticChild(staticNodePath);
       }
       if (isParametricNode) {
+        let backtrack = '';
         let isRegexNode = false;
         let isParamSafe = true;
-        let backtrack = '';
         const regexps: string[] = [];
         let lastParamStartIndex = i + 1;
 
@@ -141,7 +131,7 @@ export class RadixTree<T> implements Router<T> {
               const regex = isRegexNode
                 ? getCachedRegex(regexps.join(''))
                 : null;
-              curNode = (curNode as StaticNode<T>).createParametricChild(
+              curNode = curNode.createParametricChild(
                 regex,
                 staticPart || null,
                 nodePath,
@@ -152,12 +142,13 @@ export class RadixTree<T> implements Router<T> {
           }
         }
       } else if (isWildcardNode) {
+        if (i !== pattern.length - 1)
+          throw new Error(
+            'Wildcard "*" must be the last character in the route',
+          );
         params.push('*');
-        curNode = (curNode as StaticNode<T>).createWildcardChild();
+        curNode = curNode.createWildcardChild();
         parentNodePathIndex = i + 1;
-        if (i !== pattern.length - 1) {
-          throw new Error('Wildcard must be the last character in the route');
-        }
       }
     }
     const paramMap = Object.create(null);
@@ -166,26 +157,14 @@ export class RadixTree<T> implements Router<T> {
   }
 
   match(method: HTTPMethod, path: string): Result<T> {
-    // Ultra-fast: Check LRU cache first
-    const cached = this.#cache?.get(path);
-    if (cached) {
-      const result = cached[method] || cached[METHOD_NAME_ALL];
-      if (result) return result;
+    // Static routes O(1) Map lookup
+    const staticHandlers = this.#static.get(path);
+    if (staticHandlers) {
+      const result = staticHandlers[method] || staticHandlers[METHOD_NAME_ALL];
+      return result ? result : null;
     }
 
-    // Fast: Static routes O(1) Map lookup
-    if (isStaticPath(path)) {
-      const handlers = this.#static.get(path);
-      if (handlers) {
-        const result = handlers[method] || handlers[METHOD_NAME_ALL];
-        if (result) {
-          this.#cache?.set(path, handlers);
-          return result;
-        }
-      }
-    }
-
-    // Slow: Tree traversal
+    // Dynamic Tree traversal
     let curNode: any = this.#trees;
     const originPath = path;
     let pathIndex = curNode.prefix.length;
@@ -196,13 +175,12 @@ export class RadixTree<T> implements Router<T> {
 
     while (true) {
       if (pathIndex === pathLen && curNode.isLeafNode) {
-        this.#cache?.set(path, curNode.handlers);
         const record =
           curNode.handlers[method] || curNode.handlers[METHOD_NAME_ALL];
         if (record) {
           record[2] = params.length > 0 ? params : null;
           return record;
-        }
+        } else return null;
       }
       let node = curNode.getNextNode(
         path,
