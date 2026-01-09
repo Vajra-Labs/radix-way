@@ -1,7 +1,11 @@
 import type {StaticNode} from './node';
 
-// prettier-ignore
-export const NullObj = /* @__PURE__ */ (()=>{const e=function(){};return e.prototype=Object.create(null),Object.freeze(e.prototype),e})() as unknown as { new (): any };
+export const NullObj = (() => {
+  const e = function () {};
+  e.prototype = Object.create(null);
+  Object.freeze(e.prototype);
+  return e;
+})() as unknown as {new (): any};
 
 // Regex cache for performance optimization
 const REGEX_CACHE: Record<string, RegExp> = new NullObj();
