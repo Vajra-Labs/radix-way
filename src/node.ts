@@ -1,3 +1,4 @@
+import {NullObj} from './utils';
 import type {ParamIndexMap, HandlerSet, HTTPMethod} from './types';
 
 export const NODE_TYPES = {
@@ -15,7 +16,7 @@ export class Node<T> {
   addHandler(method: HTTPMethod, handler: T, paramMap: ParamIndexMap): void {
     let handlers = this.handlers;
     if (!handlers) {
-      handlers = this.handlers = Object.create(null);
+      handlers = this.handlers = new NullObj();
       this.isLeafNode = true;
     }
     const existing = handlers![method];

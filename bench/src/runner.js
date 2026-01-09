@@ -1,12 +1,18 @@
-import {resolve, dirname} from 'path';
-import {fileURLToPath} from 'url';
 import {Queue} from './utils.js';
+import {fileURLToPath} from 'url';
 import {fork} from 'child_process';
+import {resolve, dirname} from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const benchmarks = ['radix-tree.js', 'find-my-way.js', 'express.js'];
+const benchmarks = [
+  'rou3.js',
+  'radix-tree.js',
+  'find-my-way.js',
+  'rou3-compiled.js',
+  'express.js',
+];
 
 const queue = new Queue();
 

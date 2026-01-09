@@ -1,7 +1,10 @@
 import type {StaticNode} from './node';
 
+// prettier-ignore
+export const NullObj = /* @__PURE__ */ (()=>{const e=function(){};return e.prototype=Object.create(null),Object.freeze(e.prototype),e})() as unknown as { new (): any };
+
 // Regex cache for performance optimization
-const REGEX_CACHE: Record<string, RegExp> = Object.create(null);
+const REGEX_CACHE: Record<string, RegExp> = new NullObj();
 export const getCachedRegex = (pattern: string): RegExp => {
   if (!REGEX_CACHE[pattern]) {
     REGEX_CACHE[pattern] = new RegExp('^' + pattern + '$');
@@ -107,7 +110,7 @@ export const routeToRegExp = (
 ): [RegExp, Record<string, number>] => {
   let i = 0,
     paramIndex = 0;
-  const paramMap = Object.create(null);
+  const paramMap = new NullObj();
   const parts: string[] = [];
 
   while (i < pattern.length) {

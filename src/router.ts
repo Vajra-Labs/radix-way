@@ -4,6 +4,7 @@ import {
   trimRegExpStartAndEnd,
   getClosingBracePosition,
   prettyPrint,
+  NullObj,
 } from './utils';
 import assert from 'node:assert';
 import {METHOD_NAME_ALL} from './types';
@@ -151,7 +152,7 @@ export class RadixTree<T> implements Router<T> {
         parentNodePathIndex = i + 1;
       }
     }
-    const paramMap = Object.create(null);
+    const paramMap = new NullObj();
     params.forEach((p, idx) => (paramMap[p] = idx));
     curNode.addHandler(method, handler, paramMap);
   }

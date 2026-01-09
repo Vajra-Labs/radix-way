@@ -1,6 +1,6 @@
 {
   "name": "radix-way",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "type": "module",
   "files": [
     "dist"
@@ -16,7 +16,8 @@
     "format": "prettier --write \"./{src,tests}/**/*.{ts,js}\"",
     "release": "bun run build && npm publish",
     "check-types": "tsc --noEmit",
-    "bench": "cd bench && bun run bench"
+    "bench:bun": "cd bench && bun run bench:bun",
+    "bench:node": "cd bench && bun run bench:node"
   },
   "exports": {
     ".": {
