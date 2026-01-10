@@ -306,22 +306,22 @@ import {routeToRegExp} from 'radix-way';
 
 // Simple parameter
 const [regex1, params1] = routeToRegExp('/users/:id');
-console.log(regex1); // /^\/users\/([^/]+)$/
+console.log(regex1); // /^\/users\/([^/]+)\/?$/
 console.log(params1); // {id: 0}
 
 // With regex constraint
 const [regex2, params2] = routeToRegExp('/users/:id{\\d+}');
-console.log(regex2); // /^\/users\/(\d+)$/
+console.log(regex2); // /^\/users\/(\d+)\/?$/
 console.log(params2); // {id: 0}
 
 // Multiple parameters
 const [regex3, params3] = routeToRegExp('/posts/:category/:slug');
-console.log(regex3); // /^\/posts\/([^/]+)\/([^/]+)$/
+console.log(regex3); // /^\/posts\/([^/]+)\/([^/]+)\/?$/
 console.log(params3); // {category: 0, slug: 1}
 
 // Wildcard
 const [regex4, params4] = routeToRegExp('/static/*');
-console.log(regex4); // /^\/static\/(.*)$/
+console.log(regex4); // /^\/static\/(.*)\/?$/
 console.log(params4); // {'*': 0}
 
 // Test the regex
@@ -757,7 +757,7 @@ Output:
 │  /about [GET]
 │
 └─ Dynamic Routes (Tree)
-   /
+   <root>
    ├─ users/
    │  └─ :id [GET]
    │     └─ /posts [POST]
