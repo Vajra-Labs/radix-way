@@ -1,11 +1,12 @@
 export type {
-  HTTPMethod,
-  HandlerSet,
-  ParamIndexMap,
-  ParamStash,
   Params,
   Result,
   Router,
+  HTTPMethod,
+  HandlerSet,
+  ParamStash,
+  ParamIndexMap,
 } from './types';
 export {RadixTree} from './router';
-export {routeToRegExp} from './utils';
+export {routeToRegExp} from './regexp';
+export {trimRegExpStartAndEnd, NullObj, getClosingBracePosition} from './utils';

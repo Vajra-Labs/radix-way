@@ -1,23 +1,29 @@
 import {
+  NullObj,
+  prettyPrint,
   escapeRegExp,
-  getCachedRegex,
+  formatMethods,
   trimRegExpStartAndEnd,
   getClosingBracePosition,
-  prettyPrint,
-  NullObj,
 } from './utils';
 import assert from 'node:assert';
 import {METHOD_NAME_ALL} from './types';
 import {NODE_TYPES, StaticNode} from './node';
 import type {Result, Router, HTTPMethod} from './types';
 
-const OPTIONAL_PARAM_REGEXP = /(\/:[^/{}]*?)\?(\/?)/;
-
-// Pre-compiled regex to check for dynamic route characters (: or *)
+// Pre-compiled regex
 const DYNAMIC_ROUTE_REGEX = /[:*]/;
+const OPTIONAL_PARAM_REGEXP = /(\/:[^/{}]*?)\?(\/?)/;
 
 // Check if path is static (no : or * characters)
 const isStaticPath = (path: string) => !DYNAMIC_ROUTE_REGEX.test(path);
+
+const REGEX_CACHE = new NullObj();
+const getCachedRegex = (pattern: string): RegExp => {
+  if (!REGEX_CACHE[pattern])
+    REGEX_CACHE[pattern] = new RegExp('^' + pattern + '$');
+  return REGEX_CACHE[pattern];
+};
 
 export class RadixTree<T> implements Router<T> {
   #trees: StaticNode<T> = new StaticNode<T>('/');
@@ -29,7 +35,7 @@ export class RadixTree<T> implements Router<T> {
       'The first character of a path should be `/` or `*`',
     );
 
-    // Static routes - O(1) Map storage
+    // ---- STATIC ROUTES (O(1)) ----
     if (isStaticPath(path)) {
       if (!this.#static.has(path)) {
         this.#static.set(path, {
@@ -46,7 +52,7 @@ export class RadixTree<T> implements Router<T> {
       return;
     }
 
-    // Handle optional params (:param?)
+    // ---- OPTIONAL PARAMS ----
     const optional = path.match(OPTIONAL_PARAM_REGEXP);
     if (optional) {
       assert(
@@ -57,10 +63,10 @@ export class RadixTree<T> implements Router<T> {
       const optionalPath = path.replace(OPTIONAL_PARAM_REGEXP, '$2') || '/';
       this.insert(method, fullPath, handler);
       this.insert(method, optionalPath, handler);
-      return;
+      return void 0;
     }
 
-    // Dynamic route insertion
+    // ---- RADIX TREE INSERT ----
     let pattern = path;
     let curNode: any = this.#trees;
     let parentNodePathIndex = curNode.prefix.length;
@@ -158,18 +164,16 @@ export class RadixTree<T> implements Router<T> {
   }
 
   match(method: HTTPMethod, path: string): Result<T> {
-    // Static routes O(1) Map lookup
-    const staticHandlers = this.#static.get(path);
-    if (staticHandlers) {
-      const result = staticHandlers[method] || staticHandlers[METHOD_NAME_ALL];
-      return result ? result : null;
+    // ---- STATIC FAST PATH ----
+    const staticRecord = this.#static.get(path);
+    if (staticRecord) {
+      return staticRecord[method] || staticRecord[METHOD_NAME_ALL] || null;
     }
 
-    // Dynamic Tree traversal
+    // ---- TREE MATCH ----
     let curNode: any = this.#trees;
     const originPath = path;
     let pathIndex = curNode.prefix.length;
-
     const params: string[] = [];
     const pathLen = path.length;
     const brothersNodesStack: any[] = [];
@@ -178,10 +182,9 @@ export class RadixTree<T> implements Router<T> {
       if (pathIndex === pathLen && curNode.isLeafNode) {
         const record =
           curNode.handlers[method] || curNode.handlers[METHOD_NAME_ALL];
-        if (record) {
-          record[2] = params.length > 0 ? params : null;
-          return record;
-        } else return null;
+        if (!record) return null;
+        record[2] = params.length ? params : null;
+        return record;
       }
       let node = curNode.getNextNode(
         path,
@@ -238,8 +241,8 @@ export class RadixTree<T> implements Router<T> {
     if (this.#static.size > 0) {
       output += '┌─ Static Routes (Map)\n';
       for (const [path, methods] of this.#static.entries()) {
-        const methodList = Object.keys(methods).join(', ');
-        output += `│  ${path} [${methodList}]\n`;
+        const methodList = Object.keys(methods);
+        output += `│  ${path} [${formatMethods(methodList)}]\n`;
       }
       output += '│\n';
     }

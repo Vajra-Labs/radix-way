@@ -34,13 +34,12 @@
 
 ## Features
 
-- ⚡ **High Performance** - Up to 9x faster than find-my-way with optimized radix tree algorithm
+- ⚡ **High Performance** - Up to 16x faster than find-my-way with optimized radix tree algorithm
 - 🪶 **Zero Dependencies** - Minimal footprint, no external dependencies
 - 🎯 **Flexible Routing** - Supports static, dynamic, wildcard, and regex routes
 - 🎨 **Advanced Patterns** - Multi-parameters, optional params, regex constraints
 - 🔗 **Middleware Support** - Multiple handlers per route for middleware chains
 - 🔧 **TypeScript Support** - Full type safety with generics
-- 🛠️ **Simple API** - Clean 3-method interface: insert, match, printTree
 - 📖 **Well Documented** - Comprehensive examples and guides
 
 ## Table of Contents
@@ -427,28 +426,30 @@ Benchmarked against find-my-way (Node.js v24+):
 
 ### Speed Comparison
 
-| Route Type             | radix-way   | find-my-way | Performance     |
-| ---------------------- | ----------- | ----------- | --------------- |
-| Short Static           | 136.1M ops/s| 52.6M ops/s | +159% faster 🚀 |
-| Static with Same Radix | 137.4M ops/s| 16.5M ops/s | +733% faster 🔥 |
-| Dynamic Route          | 14.6M ops/s | 9.2M ops/s  | +59% faster ⚡  |
-| Mixed Static Dynamic   | 12.3M ops/s | 10.8M ops/s | +13% faster ✅  |
-| Long Static            | 166.7M ops/s| 10.7M ops/s | +1458% faster 💪|
-| Wildcard               | 21.3M ops/s | 14.0M ops/s | +52% faster ⚡  |
-| All Together           | 4.4M ops/s  | 2.1M ops/s  | +112% faster 🎯 |
+| Route Type             | radix-way     | find-my-way | Performance      |
+| ---------------------- | ------------- | ----------- | ---------------- |
+| Short Static           | 178.96M ops/s | 52.6M ops/s | +240% faster 🚀  |
+| Static with Same Radix | 216.71M ops/s | 16.5M ops/s | +1213% faster 🔥 |
+| Dynamic Route          | 15.94M ops/s  | 9.2M ops/s  | +73% faster ⚡   |
+| Mixed Static Dynamic   | 14.56M ops/s  | 10.8M ops/s | +35% faster ✅   |
+| Long Static            | 182.33M ops/s | 10.7M ops/s | +1603% faster 💪 |
+| Wildcard               | 25.26M ops/s  | 14.0M ops/s | +80% faster ⚡   |
+| All Together           | 5.07M ops/s   | 2.1M ops/s  | +141% faster 🎯  |
 
 **Key Highlights:**
 
 - **Static routes** are exceptionally fast due to optimized radix tree structure with O(1) Map lookup
 - **Pre-compiled regex** for dynamic path validation provides significant performance boost
-- **Consistently faster** than find-my-way in all scenarios, from +13% to +1458% improvement
+- **Consistently faster** than find-my-way in all scenarios, from +35% to +1603% improvement
 
 ### Run Benchmarks
 
 ```bash
-cd bench
-bun install
-bun run bench
+# Run benchmarks with Bun
+bun run bench:bun
+
+# Run benchmarks with Node.js
+bun run bench:node
 ```
 
 ## How It Works
@@ -583,12 +584,20 @@ Combine multi-params with regex validation:
 
 ```typescript
 // Date format validation
-router.insert('GET', '/date/:year{\\d{4}}-:month{\\d{2}}-:day{\\d{2}}', handler);
+router.insert(
+  'GET',
+  '/date/:year{\\d{4}}-:month{\\d{2}}-:day{\\d{2}}',
+  handler,
+);
 router.match('GET', '/date/2024-12-28'); // ✅ matches
 router.match('GET', '/date/24-12-28'); // ❌ null (year must be 4 digits)
 
 // Version numbers
-router.insert('GET', '/v/:major{\\d+}.:minor{\\d+}.:patch{\\d+}', versionHandler);
+router.insert(
+  'GET',
+  '/v/:major{\\d+}.:minor{\\d+}.:patch{\\d+}',
+  versionHandler,
+);
 router.match('GET', '/v/1.2.3'); // ✅ matches
 
 // IP address
@@ -760,13 +769,13 @@ Output:
 
 While both routers use radix trees, there are key architectural differences:
 
-| Feature            | RadixTree                         | find-my-way                       |
-| ------------------ | --------------------------------- | --------------------------------- |
-| Tree Structure     | Single tree (path-first)          | Multiple trees (method-first)     |
-| Performance        | Up to 15x faster                  | Baseline                          |
-| Optimization       | Pre-compiled regex + Map lookup   | Loop-based matching               |
-| Best For           | All applications                  | Advanced routing features         |
-| Route Registration | Multiple handlers (middleware)    | Supports constraints & versioning |
+| Feature            | RadixTree                       | find-my-way                       |
+| ------------------ | ------------------------------- | --------------------------------- |
+| Tree Structure     | Single tree (path-first)        | Multiple trees (method-first)     |
+| Performance        | Up to 16x faster                | Baseline                          |
+| Optimization       | Pre-compiled regex + Map lookup | Loop-based matching               |
+| Middleware Support | Multiple handlers per route     | Single handler per route          |
+| Route Constraints  | Regex patterns with {} syntax   | Built-in constraints & versioning |
 
 **Migration from find-my-way:**
 

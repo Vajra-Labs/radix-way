@@ -1,5 +1,5 @@
 import http from 'http';
-import {RadixTree} from './src/index';
+import {RadixTree} from './dist/index.js';
 
 type Req = http.IncomingMessage;
 type Res = http.ServerResponse<http.IncomingMessage> & {

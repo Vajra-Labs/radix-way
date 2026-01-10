@@ -86,14 +86,6 @@ export type Result<T> = HandlerSet<T> | null;
  */
 export type HandlerSet<T> = [T[], ParamIndexMap | null, ParamStash | null];
 
-/**
- * Supported HTTP methods.
- *
- * Includes all standard, WebDAV, and extension methods,
- * plus `ALL` for method-agnostic routes.
- *
- * Allows custom methods via string extension.
- */
 // prettier-ignore
 export type HTTPMethod =
   | 'ACL' | 'BIND' | 'CHECKOUT' | 'CONNECT' | 'COPY'

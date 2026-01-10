@@ -109,7 +109,7 @@ export class StaticNode<T> extends ParentNode<T> {
     // insertion point
     const arr = this.parametricChildren;
     let i = arr.length;
-    // comparator copied from find-my-way logic (small array, linear insert)
+    // comparator for parametric children ordering (small array, linear insert)
     function cmp(a: ParametricNode<T>, b: ParametricNode<T>) {
       if (!a.isRegex) return 1;
       if (!b.isRegex) return -1;

@@ -3,8 +3,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "bench:bun": "bun ./src/runner.js",
-    "bench:node": "node ./src/runner.js"
+    "bench:bun": "bun run ./src/runner.js",
+    "bench:node": "node --expose-gc ./src/runner.js"
   },
   "devDependencies": {
     "@types/bun": "latest",
