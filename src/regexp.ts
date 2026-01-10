@@ -39,7 +39,7 @@ export function routeToRegExp(pattern: string): [RegExp, ParamIndexMap] {
       const index = segment.indexOf('{');
       if (index !== -1) getClosingBracePosition(segment, index);
       // Parameter segment - handle regex constraints
-      let processedSegment = segment.replace(
+      const processedSegment = segment.replace(
         PARAM_REGEX,
         (_, paramName, regex) => {
           // Check for optional parameter

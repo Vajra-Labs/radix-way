@@ -76,13 +76,21 @@ describe('routeToRegExp', () => {
 
   it('should throw error for malformed braces', () => {
     expect(() => routeToRegExp('/users/:id{\\d+')).toThrow('Invalid regex in');
-    expect(() => routeToRegExp('/users/:id{{\\d+}')).toThrow('Invalid regex in');
-    expect(() => routeToRegExp('/users/:id{\\d+{test}')).toThrow('Invalid regex in');
+    expect(() => routeToRegExp('/users/:id{{\\d+}')).toThrow(
+      'Invalid regex in',
+    );
+    expect(() => routeToRegExp('/users/:id{\\d+{test}')).toThrow(
+      'Invalid regex in',
+    );
   });
 
   it('should throw error for optional parameter not at end', () => {
-    expect(() => routeToRegExp('/posts/:category?/:slug?')).toThrow('Optional parameter must be last in path');
-    expect(() => routeToRegExp('/users/:id?/profile')).toThrow('Optional parameter must be last in path');
+    expect(() => routeToRegExp('/posts/:category?/:slug?')).toThrow(
+      'Optional parameter must be last in path',
+    );
+    expect(() => routeToRegExp('/users/:id?/profile')).toThrow(
+      'Optional parameter must be last in path',
+    );
   });
 
   it('should handle mixed parameters and static text', () => {
