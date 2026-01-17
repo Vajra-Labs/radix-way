@@ -1,24 +1,25 @@
 import {
-  NullObj,
+  Null,
   prettyPrint,
-  escapeRegExp,
-  formatMethods,
   trimRegExpStartAndEnd,
   getClosingBracePosition,
 } from './utils';
-import assert from 'node:assert';
 import {METHOD_NAME_ALL} from './types';
 import {NODE_TYPES, StaticNode} from './node';
 import type {Result, Router, HTTPMethod} from './types';
 
-// Pre-compiled regex
+/** Matches regex special characters for escaping */
+const ESCAPE_REGEX = /[.*+?^${}()|[\]\\]/g;
+/** Detects dynamic routes containing `:` or `*` */
 const DYNAMIC_ROUTE_REGEX = /[:*]/;
+/** Matches optional parameters (must be last segment) */
 const OPTIONAL_PARAM_REGEXP = /(\/:[^/{}]*?)\?(\/?)/;
 
-// Check if path is static (no : or * characters)
-const isStaticPath = (path: string) => !DYNAMIC_ROUTE_REGEX.test(path);
+// Helper functions
+export const isStaticPath = (path: string) => !DYNAMIC_ROUTE_REGEX.test(path);
+export const escapeRegExp = (str: string) => str.replace(ESCAPE_REGEX, '\\$&');
 
-const REGEX_CACHE = new NullObj();
+const REGEX_CACHE = new Null();
 const getCachedRegex = (pattern: string): RegExp => {
   if (!REGEX_CACHE[pattern])
     REGEX_CACHE[pattern] = new RegExp('^' + pattern + '$');
@@ -30,43 +31,38 @@ export class RadixTree<T> implements Router<T> {
   #static = new Map<string, Record<string, Result<T>>>();
 
   insert(method: HTTPMethod, path: string, handler: T): void {
-    assert(
-      path[0] === '/' || path[0] === '*',
-      'The first character of a path should be `/` or `*`',
-    );
-
-    // ---- STATIC ROUTES (O(1)) ----
+    if (path[0] !== '/' && path[0] !== '*') {
+      throw new SyntaxError(
+        'The first character of a path should be `/` or `*`',
+      );
+    }
+    // STATIC ROUTES (O(1))
     if (isStaticPath(path)) {
       if (!this.#static.has(path)) {
-        this.#static.set(path, {
-          [method]: [[handler], null, null],
-        });
+        this.#static.set(path, {[method]: [handler]});
       } else {
         const handlers = this.#static.get(path)!;
         if (!handlers[method]) {
-          handlers[method] = [[handler], null, null];
+          handlers[method] = [handler];
         } else {
-          handlers[method][0].push(handler);
+          handlers[method].push(handler as any);
         }
       }
       return;
     }
-
-    // ---- OPTIONAL PARAMS ----
+    // OPTIONAL PARAMS
     const optional = path.match(OPTIONAL_PARAM_REGEXP);
     if (optional) {
-      assert(
-        path.length === optional.index! + optional[0].length,
-        'Optional parameter must be last in path',
-      );
+      if (path.length !== optional.index! + optional[0].length) {
+        throw new SyntaxError('Optional parameter must be last in path');
+      }
       const fullPath = path.replace(OPTIONAL_PARAM_REGEXP, '$1$2');
       const optionalPath = path.replace(OPTIONAL_PARAM_REGEXP, '$2') || '/';
       this.insert(method, fullPath, handler);
       this.insert(method, optionalPath, handler);
-      return void 0;
+      return;
     }
-
-    // ---- RADIX TREE INSERT ----
+    // RADIX TREE INSERT
     let pattern = path;
     let curNode: any = this.#trees;
     let parentNodePathIndex = curNode.prefix.length;
@@ -150,7 +146,7 @@ export class RadixTree<T> implements Router<T> {
         }
       } else if (isWildcardNode) {
         if (i !== pattern.length - 1)
-          throw new Error(
+          throw new SyntaxError(
             'Wildcard "*" must be the last character in the route',
           );
         params.push('*');
@@ -158,32 +154,37 @@ export class RadixTree<T> implements Router<T> {
         parentNodePathIndex = i + 1;
       }
     }
-    const paramMap = new NullObj();
-    params.forEach((p, idx) => (paramMap[p] = idx));
-    curNode.addHandler(method, handler, paramMap);
+    const map = new Null();
+    params.forEach((p, idx) => (map[p] = idx));
+    curNode.addHandler(method, handler, map);
   }
 
   match(method: HTTPMethod, path: string): Result<T> {
-    // ---- STATIC FAST PATH ----
+    // STATIC FAST PATH
     const staticRecord = this.#static.get(path);
-    if (staticRecord) {
+    if (staticRecord)
       return staticRecord[method] || staticRecord[METHOD_NAME_ALL] || null;
-    }
 
-    // ---- TREE MATCH ----
-    let curNode: any = this.#trees;
-    const originPath = path;
-    let pathIndex = curNode.prefix.length;
+    // TREE MATCH
+    let curNode: any = this.#trees,
+      pathIndex = curNode.prefix.length;
     const params: string[] = [];
+    const originPath = path;
     const pathLen = path.length;
     const brothersNodesStack: any[] = [];
-
     while (true) {
       if (pathIndex === pathLen && curNode.isLeafNode) {
+        // If we're at a parametric node but at root path, don't match
+        if (
+          curNode.kind === NODE_TYPES.PARAMETRIC &&
+          pathIndex === NODE_TYPES.PARAMETRIC
+        ) {
+          return null;
+        }
         const record =
           curNode.handlers[method] || curNode.handlers[METHOD_NAME_ALL];
         if (!record) return null;
-        record[2] = params.length ? params : null;
+        record[2] = params;
         return record;
       }
       let node = curNode.getNextNode(
@@ -232,9 +233,7 @@ export class RadixTree<T> implements Router<T> {
     }
   }
 
-  printTree(print: true): void;
-  printTree(print?: false): string;
-  printTree(print: boolean = true): void | string {
+  printTree(): void {
     let output = '';
 
     // Print static routes from Map
@@ -242,7 +241,7 @@ export class RadixTree<T> implements Router<T> {
       output += '┌─ Static Routes (Map)\n';
       for (const [path, methods] of this.#static.entries()) {
         const methodList = Object.keys(methods);
-        output += `│  ${path} [${formatMethods(methodList)}]\n`;
+        output += `│  ${path} [${methodList.join(', ')}]\n`;
       }
       output += '│\n';
     }
@@ -256,10 +255,6 @@ export class RadixTree<T> implements Router<T> {
       .map(line => (line ? '   ' + line : ''))
       .join('\n');
 
-    if (print) {
-      console.log(output);
-      return;
-    }
-    return output;
+    console.log(output);
   }
 }

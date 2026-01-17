@@ -32,19 +32,8 @@ export interface Router<T> {
 
   /**
    * Print Tree the router's internal tree or lookup structure.
-   *
-   * Useful for debugging and inspection.
-   *
-   * @param print - When `true`, logs the output to the console.
-   *                When `false` or omitted, returns the string instead.
-   *
-   * @returns
-   * - `void` if `print` is `true`
-   * - A formatted string representation otherwise
    */
-  printTree(print: true): void;
-  printTree(print?: false): string;
-  printTree(print?: boolean): void | string;
+  printTree(): void;
 }
 
 /**
@@ -74,7 +63,7 @@ export type Params = Record<string, string>;
  * - `HandlerSet<T>` when a route matches
  * - `null` when no route matches
  */
-export type Result<T> = HandlerSet<T> | null;
+export type Result<T> = HandlerSet<T> | T[] | null;
 
 /**
  * A matched handler set with optional parameter metadata.
@@ -84,7 +73,7 @@ export type Result<T> = HandlerSet<T> | null;
  * 2. Parameter index map (or `null` if no params)
  * 3. Parameter value stash (or `null` if no params)
  */
-export type HandlerSet<T> = [T[], ParamIndexMap | null, ParamStash | null];
+export type HandlerSet<T> = [T[], ParamIndexMap, ParamStash];
 
 // prettier-ignore
 export type HTTPMethod =

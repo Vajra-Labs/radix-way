@@ -14,12 +14,10 @@ describe('RadixTree', () => {
       router.insert('GET', '/posts', 'list-posts');
       const r1 = router.match('GET', '/users');
       expect(r1).not.toBeNull();
-      expect(r1![0][0]).toBe('list-users');
-      expect(r1![2]).toBe(null);
+      expect(r1![0]).toBe('list-users');
       const r2 = router.match('GET', '/posts');
       expect(r2).not.toBeNull();
-      expect(r2![0][0]).toBe('list-posts');
-      expect(r2![2]).toBe(null);
+      expect(r2![0]).toBe('list-posts');
     });
 
     it('should return empty for non-existent routes', () => {
@@ -155,8 +153,7 @@ describe('RadixTree', () => {
       router.insert('GET', '/items/:id?', 'get-items');
       const r1 = router.match('GET', '/items');
       expect(r1).not.toBeNull();
-      expect(r1![0][0]).toBe('get-items');
-      expect(r1![2]).toBe(null); // static route
+      expect(r1![0]).toBe('get-items'); // static route
       const r2 = router.match('GET', '/items/123');
       expect(r2).not.toBeNull();
       expect(r2![0][0]).toBe('get-items');
@@ -213,8 +210,7 @@ describe('RadixTree', () => {
       router.insert('GET', '/users/me', 'static');
       const r1 = router.match('GET', '/users/me');
       expect(r1).not.toBeNull();
-      expect(r1![0][0]).toBe('static');
-      expect(r1![2]).toBe(null); // static route
+      expect(r1![0]).toBe('static'); // static route
       const r2 = router.match('GET', '/users/123');
       expect(r2).not.toBeNull();
       expect(r2![0][0]).toBe('param');
@@ -247,10 +243,10 @@ describe('RadixTree', () => {
       router.insert('POST', '/users', 'post');
       router.insert('PUT', '/users', 'put');
       router.insert('DELETE', '/users', 'delete');
-      expect(router.match('GET', '/users')![0][0]).toBe('get');
-      expect(router.match('POST', '/users')![0][0]).toBe('post');
-      expect(router.match('PUT', '/users')![0][0]).toBe('put');
-      expect(router.match('DELETE', '/users')![0][0]).toBe('delete');
+      expect(router.match('GET', '/users')![0]).toBe('get');
+      expect(router.match('POST', '/users')![0]).toBe('post');
+      expect(router.match('PUT', '/users')![0]).toBe('put');
+      expect(router.match('DELETE', '/users')![0]).toBe('delete');
     });
   });
 
@@ -265,18 +261,14 @@ describe('RadixTree', () => {
       router.insert('GET', '/', 'root');
       const result = router.match('GET', '/');
       expect(result).not.toBeNull();
-      const [handlers, , params] = result!;
-      expect(handlers[0]).toBe('root');
-      expect(params).toBe(null); // static route
+      expect(result![0]).toBe('root');
     });
 
     it('should handle empty params', () => {
       router.insert('GET', '/users', 'handler');
       const result = router.match('GET', '/users');
       expect(result).not.toBeNull();
-      const [handlers, , params] = result!;
-      expect(handlers[0]).toBe('handler');
-      expect(params).toBe(null); // static route
+      expect(result![0]).toBe('handler');
     });
 
     it('should handle special characters in params', () => {
@@ -300,13 +292,13 @@ describe('RadixTree', () => {
       router.insert('ALL', '/api', 'all-handler');
       const getRes = router.match('GET', '/api');
       expect(getRes).not.toBeNull();
-      expect(getRes![0][0]).toBe('all-handler');
+      expect(getRes![0]).toBe('all-handler');
       const postRes = router.match('POST', '/api');
       expect(postRes).not.toBeNull();
-      expect(postRes![0][0]).toBe('all-handler');
+      expect(postRes![0]).toBe('all-handler');
       const putRes = router.match('PUT', '/api');
       expect(putRes).not.toBeNull();
-      expect(putRes![0][0]).toBe('all-handler');
+      expect(putRes![0]).toBe('all-handler');
     });
 
     it('should prefer specific method over ALL', () => {
@@ -314,10 +306,10 @@ describe('RadixTree', () => {
       router.insert('GET', '/api', 'get-handler');
       const getRes = router.match('GET', '/api');
       expect(getRes).not.toBeNull();
-      expect(getRes![0][0]).toBe('get-handler');
+      expect(getRes![0]).toBe('get-handler');
       const postRes = router.match('POST', '/api');
       expect(postRes).not.toBeNull();
-      expect(postRes![0][0]).toBe('all-handler');
+      expect(postRes![0]).toBe('all-handler');
     });
 
     it('should work with ALL and parametric routes', () => {

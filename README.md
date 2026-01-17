@@ -34,12 +34,13 @@
 
 ## Features
 
-- ⚡ **High Performance** - Up to 16x faster than find-my-way with optimized radix tree algorithm
+- ⚡ **High Performance** - Up to 14x faster than find-my-way with optimized Map-based static routes
 - 🪶 **Zero Dependencies** - Minimal footprint, no external dependencies
 - 🎯 **Flexible Routing** - Supports static, dynamic, wildcard, and regex routes
 - 🎨 **Advanced Patterns** - Multi-parameters, optional params, regex constraints
 - 🔗 **Middleware Support** - Multiple handlers per route for middleware chains
 - 🔧 **TypeScript Support** - Full type safety with generics
+- 💾 **Memory Efficient** - Map-based storage for optimal memory usage at scale
 - 📖 **Well Documented** - Comprehensive examples and guides
 
 ## Table of Contents
@@ -57,7 +58,7 @@
   - [`new RadixTree<T>()`](#new-radixtreet)
   - [`insert(method, path, handler)`](#insertmethod-string-path-string-handler-t-void)
   - [`match(method, path)`](#matchmethod-string-path-string-t-paramindexmap-string--null)
-  - [`printTree(print?)`](#printtreeprint-boolean-void--string)
+  - [`printTree()`](#printtree-void)
   - [`routeToRegExp(pattern)`](#routetoregexppattern-string-regexp-paramindexmap)
 - [Usage with HTTP Server](#usage-with-http-server)
   - [Node.js](#nodejs)
@@ -241,53 +242,62 @@ router.insert('GET', '/api/users', usersHandler);
 router.insert('ALL', '/api/health', healthCheckHandler);
 ```
 
-### `match(method: string, path: string): [T[], ParamIndexMap, string[]] | null`
+### `match(method: string, path: string): T[] | [T[], ParamIndexMap, string[]] | null`
 
 Match a route and return handlers with parameters.
 
 **Returns:**
 
-- `[handlers, paramMap, params]` - If match found:
+- **Static routes**: `[handler1, handler2, ...]` - Direct handler array for optimal performance
+- **Dynamic routes**: `[handlers, paramMap, params]` - Full tuple with parameter information:
   - `handlers` - Array of handler functions/values (supports middleware chains)
   - `paramMap` - Parameter name to index mapping (e.g., `{id: 0, slug: 1}`)
   - `params` - Array of extracted parameter values
 - `null` - If no match found
 
 ```typescript
-const result = router.match('GET', '/api/users/123');
-if (result) {
-  const [handlers, paramMap, params] = result;
+// Static route example
+const staticResult = router.match('GET', '/users');
+if (staticResult && !Array.isArray(staticResult[0])) {
+  // Direct handler access for static routes
+  staticResult[0](req, res);
+}
+
+// Dynamic route example
+const dynamicResult = router.match('GET', '/api/users/123');
+if (dynamicResult && Array.isArray(dynamicResult[0])) {
+  const [handlers, paramMap, params] = dynamicResult;
   const userId = params[paramMap.id]; // '123'
+  handlers[0](req, res);
+}
 
-  // Execute single handler
-  if (handlers.length === 1) {
-    await handlers[0](req, res);
+// Universal handling
+const result = router.match('GET', '/some/path');
+if (result) {
+  if (Array.isArray(result[0])) {
+    // Dynamic route
+    const [handlers] = result;
+    handlers[0](req, res);
+  } else {
+    // Static route
+    result[0](req, res);
   }
-
-  // Execute middleware chain
-  for (const handler of handlers) {
-    await handler(req, res);
+}
   }
 }
 ```
 
-### `printTree(print?: boolean): void | string`
+### `printTree(): void`
 
-Print the router tree structure for debugging.
-
-**Parameters:**
-
-- `print` - When `true` (default), logs to console and returns `void`. When `false`, returns the string representation.
+Print the router tree structure for debugging. Shows both static routes (stored in Map) and dynamic routes (stored in radix tree).
 
 ```typescript
-// Print to console (default)
 router.printTree();
-router.printTree(true);
-
-// Get as string
-const treeStr = router.printTree(false);
-console.log(treeStr);
 ```
+
+**Output Format:**
+- **Static Routes (Map)** - Lists all static routes with their HTTP methods
+- **Dynamic Routes (Tree)** - Shows the radix tree structure for dynamic routes
 
 ### `routeToRegExp(pattern: string): [RegExp, ParamIndexMap]`
 
@@ -343,7 +353,7 @@ import {RadixTree} from 'radix-way';
 const router = new RadixTree<(req: any, res: any) => void>();
 
 router.insert('GET', '/', (req, res) => {
-  res.end('Home');
+  res.end('Welcome to Radix Way!');
 });
 
 router.insert('GET', '/users/:id', (req, res) => {
@@ -352,16 +362,25 @@ router.insert('GET', '/users/:id', (req, res) => {
 
 createServer((req, res) => {
   const result = router.match(req.method!, req.url!);
-
+  
   if (!result) {
     res.statusCode = 404;
     res.end('Not Found');
     return;
   }
-
-  const [handlers, paramMap, params] = result;
-
-  // Access params by name
+  
+  // Handle both static and dynamic routes
+  if (Array.isArray(result[0])) {
+    // Dynamic route - [handlers[], paramMap, params]
+    const [handlers] = result;
+    handlers[0](req, res);
+  } else {
+    // Static route - handlers[]
+    result[0](req, res);
+  }
+}).listen(3000, () => {
+  console.log('🚀 Server running at http://localhost:3000');
+});
   if (paramMap.id !== undefined) {
     console.log('User ID:', params[paramMap.id]);
   }
@@ -378,8 +397,9 @@ import {RadixTree} from 'radix-way';
 
 const router = new RadixTree<(req: Request) => Response>();
 
-router.insert('GET', '/', () => new Response('Home'));
-router.insert('GET', '/users/:id', () => new Response('User'));
+router.insert('GET', '/', () => new Response('Welcome to Radix Way!'));
+
+router.insert('GET', '/users/:id', () => new Response('User handler'));
 
 Bun.serve({
   port: 3000,
@@ -391,8 +411,15 @@ Bun.serve({
       return new Response('Not Found', {status: 404});
     }
 
-    const [handlers] = result;
-    return handlers[0](req);
+    // Handle both static and dynamic routes
+    if (Array.isArray(result[0])) {
+      // Dynamic route
+      const [handlers] = result;
+      return handlers[0](req);
+    } else {
+      // Static route
+      return result[0](req);
+    }
   },
 });
 ```
@@ -428,19 +455,19 @@ Benchmarked against find-my-way (Node.js v24+):
 
 | Route Type             | radix-way     | find-my-way | Performance      |
 | ---------------------- | ------------- | ----------- | ---------------- |
-| Short Static           | 178.96M ops/s | 52.6M ops/s | +240% faster 🚀  |
-| Static with Same Radix | 216.71M ops/s | 16.5M ops/s | +1213% faster 🔥 |
-| Dynamic Route          | 15.94M ops/s  | 9.2M ops/s  | +73% faster ⚡   |
-| Mixed Static Dynamic   | 14.56M ops/s  | 10.8M ops/s | +35% faster ✅   |
-| Long Static            | 182.33M ops/s | 10.7M ops/s | +1603% faster 💪 |
-| Wildcard               | 25.26M ops/s  | 14.0M ops/s | +80% faster ⚡   |
-| All Together           | 5.07M ops/s   | 2.1M ops/s  | +141% faster 🎯  |
+| Short Static           | 150.9M ops/s  | 50.2M ops/s | +201% faster 🚀  |
+| Static with Same Radix | 160.5M ops/s  | 16.4M ops/s | +879% faster 🔥  |
+| Dynamic Route          | 14.5M ops/s   | 8.9M ops/s  | +63% faster ⚡   |
+| Mixed Static Dynamic   | 13.7M ops/s   | 10.8M ops/s | +27% faster ✅   |
+| Long Static            | 166.9M ops/s  | 11.4M ops/s | +1364% faster 💪 |
+| Wildcard               | 24.5M ops/s   | 13.0M ops/s | +88% faster ⚡   |
+| All Together           | 4.9M ops/s    | 1.9M ops/s  | +158% faster 🎯  |
 
 **Key Highlights:**
 
-- **Static routes** are exceptionally fast due to optimized radix tree structure with O(1) Map lookup
-- **Pre-compiled regex** for dynamic path validation provides significant performance boost
-- **Consistently faster** than find-my-way in all scenarios, from +35% to +1603% improvement
+- **Static routes** are exceptionally fast due to optimized Map-based storage with direct handler access
+- **Memory efficient** - Map data structure provides better memory management for large applications
+- **Consistently faster** than find-my-way in all scenarios, with 2.6x overall performance improvement
 
 ### Run Benchmarks
 
@@ -456,8 +483,8 @@ bun run bench:node
 
 The router uses a **radix tree** (compressed trie) data structure:
 
-1. **Static segments** are stored in tree nodes with `Object.create(null)` for zero overhead
-2. **Prefix matching** uses dynamically generated code (`new Function()`) for optimal performance
+1. **Static routes** are stored in a Map for O(1) lookup performance
+2. **Dynamic routes** use radix tree nodes with optimized prefix matching
 3. **Dynamic parameters** (`:param`) are handled with parametric nodes
 4. **Wildcards** (`*`) match remaining path segments
 5. **Backtracking** allows multiple route patterns to coexist
@@ -743,10 +770,6 @@ router.insert('GET', '/static/*', handler);
 
 // Print to console
 router.printTree();
-
-// Or get as string
-const tree = router.printTree(false);
-console.log(tree);
 ```
 
 Output:
@@ -772,7 +795,7 @@ While both routers use radix trees, there are key architectural differences:
 | Feature            | RadixTree                       | find-my-way                       |
 | ------------------ | ------------------------------- | --------------------------------- |
 | Tree Structure     | Single tree (path-first)        | Multiple trees (method-first)     |
-| Performance        | Up to 16x faster                | Baseline                          |
+| Performance        | Up to 14x faster                | Baseline                          |
 | Optimization       | Pre-compiled regex + Map lookup | Loop-based matching               |
 | Middleware Support | Multiple handlers per route     | Single handler per route          |
 | Route Constraints  | Regex patterns with {} syntax   | Built-in constraints & versioning |

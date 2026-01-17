@@ -1,14 +1,6 @@
+import {escapeRegExp} from './router';
 import type {ParamIndexMap} from './types';
-import {
-  escapeRegExp,
-  NullObj,
-  trimRegExpStartAndEnd,
-  getClosingBracePosition,
-} from './utils';
-
-// Pre-compiled regex
-const DOT_REGEX = /\./g;
-const PARAM_REGEX = /:(\w+\??)(?:\{([^}]+)\})?/g;
+import {Null, trimRegExpStartAndEnd, getClosingBracePosition} from './utils';
 
 /**
  * Convert route pattern to regular expression with parameter mapping
@@ -16,13 +8,12 @@ const PARAM_REGEX = /:(\w+\??)(?:\{([^}]+)\})?/g;
  * @returns Tuple containing compiled regex and parameter index mapping
  */
 export function routeToRegExp(pattern: string): [RegExp, ParamIndexMap] {
-  // Match RadixTree validation - empty string not allowed
   if (!pattern) {
-    throw new Error('The first character of a path should be `/` or `*`');
+    throw new SyntaxError('The first character of a path should be `/` or `*`');
   }
 
   let paramIndex = 0;
-  const params = new NullObj();
+  const params = new Null();
   const reSegments = [];
   const segments = pattern.split('/');
 
@@ -30,34 +21,41 @@ export function routeToRegExp(pattern: string): [RegExp, ParamIndexMap] {
     const segment = segments[i];
     if (!segment) continue;
     if (segment === '*') {
-      // Wildcard must be the last segment
       if (i !== segments.length - 1)
-        throw new Error('Wildcard "*" must be the last character in the route');
+        throw new SyntaxError(
+          'Wildcard "*" must be the last character in the route',
+        );
       params['*'] = paramIndex++;
       reSegments.push('(.*)');
     } else if (segment.includes(':')) {
-      const index = segment.indexOf('{');
-      if (index !== -1) getClosingBracePosition(segment, index);
-      // Parameter segment - handle regex constraints
-      const processedSegment = segment.replace(
-        PARAM_REGEX,
-        (_, paramName, regex) => {
-          // Check for optional parameter
-          if (paramName.endsWith('?')) {
-            // Optional parameter must be last in path
-            if (i !== segments.length - 1)
-              throw new Error('Optional parameter must be last in path');
-            paramName = paramName.slice(0, -1); // Remove '?'
+      let result = '';
+      let i = 0;
+      while (i < segment.length) {
+        if (segment[i] === ':') {
+          let j = i + 1;
+          let paramName = '';
+          while (j < segment.length && /\w/.test(segment[j])) {
+            paramName += segment[j++];
+          }
+          if (segment[j] === '?') {
+            throw new SyntaxError('Optional parameters are not supported');
+          }
+          let regex = null;
+          if (segment[j] === '{') {
+            const end = getClosingBracePosition(segment, j);
+            regex = trimRegExpStartAndEnd(segment.slice(j + 1, end));
+            j = end + 1;
           }
           params[paramName] = paramIndex++;
-          if (regex) return `(${trimRegExpStartAndEnd(regex)})`;
-          return '([^/]+)';
-        },
-      );
-      // Escape dots in static parts
-      reSegments.push(processedSegment.replace(DOT_REGEX, '\\.'));
+          result += regex ? `(${regex})` : '([^/]+)';
+          i = j;
+        } else {
+          result += segment[i] === '.' ? '\\.' : segment[i];
+          i++;
+        }
+      }
+      reSegments.push(result);
     } else {
-      // Static segment - escape regex special characters
       reSegments.push(escapeRegExp(segment));
     }
   }

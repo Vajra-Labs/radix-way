@@ -1,4 +1,4 @@
-import {NullObj} from './utils';
+import {Null} from './utils';
 import type {ParamIndexMap, HandlerSet, HTTPMethod} from './types';
 
 export const NODE_TYPES = {
@@ -7,8 +7,6 @@ export const NODE_TYPES = {
   WILDCARD: 2,
 } as const;
 
-export type NodeType = (typeof NODE_TYPES)[keyof typeof NODE_TYPES];
-
 export class Node<T> {
   handlers?: Record<HTTPMethod, HandlerSet<T>>;
   isLeafNode = false;
@@ -16,12 +14,12 @@ export class Node<T> {
   addHandler(method: HTTPMethod, handler: T, paramMap: ParamIndexMap): void {
     let handlers = this.handlers;
     if (!handlers) {
-      handlers = this.handlers = new NullObj();
+      handlers = this.handlers = new Null();
       this.isLeafNode = true;
     }
     const existing = handlers![method];
     if (existing) {
-      existing[0].push(handler);
+      (existing[0] as any).push(handler);
     } else {
       handlers![method] = [[handler], paramMap, null];
     }
@@ -71,7 +69,7 @@ export class ParentNode<T> extends Node<T> {
 }
 
 export class StaticNode<T> extends ParentNode<T> {
-  kind: NodeType = NODE_TYPES.STATIC;
+  kind: number = NODE_TYPES.STATIC;
   prefix: string;
   wildcardChild: WildcardNode<T> | null = null;
   parametricChildren: ParametricNode<T>[] = [];
@@ -201,7 +199,7 @@ export class StaticNode<T> extends ParentNode<T> {
 }
 
 export class ParametricNode<T> extends ParentNode<T> {
-  kind: NodeType = NODE_TYPES.PARAMETRIC;
+  kind: number = NODE_TYPES.PARAMETRIC;
   isRegex: boolean;
   regex: RegExp | null;
   staticSuffix: string | null;
@@ -225,7 +223,7 @@ export class ParametricNode<T> extends ParentNode<T> {
 }
 
 export class WildcardNode<T> extends Node<T> {
-  kind: NodeType = NODE_TYPES.WILDCARD;
+  kind: number = NODE_TYPES.WILDCARD;
 
   getNextNode() {
     return null;

@@ -7,6 +7,5 @@ export type {
   ParamStash,
   ParamIndexMap,
 } from './types';
-export {RadixTree} from './router';
-export {routeToRegExp} from './regexp';
-export {trimRegExpStartAndEnd, NullObj, getClosingBracePosition} from './utils';
+export {RadixTree, escapeRegExp, isStaticPath} from './router';
+export {trimRegExpStartAndEnd, Null, getClosingBracePosition} from './utils';

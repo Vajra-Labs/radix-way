@@ -1,13 +1,11 @@
 import type {StaticNode} from './node';
 
-export const NullObj = (() => {
+export const Null = (() => {
   const e = function () {};
   e.prototype = Object.create(null);
   Object.freeze(e.prototype);
   return e;
 })() as unknown as {new (): any};
-
-export const formatMethods = (methods: string[]) => methods.join(', ');
 
 export const prettyPrint = <T>(
   node: StaticNode<T>,
@@ -19,12 +17,12 @@ export const prettyPrint = <T>(
   if (isRoot) {
     out += `<root>`;
     if (node.isLeafNode && node.handlers) {
-      out += ` [${formatMethods(Object.keys(node.handlers))}]`;
+      out += ` [${Object.keys(node.handlers).join(', ')}]`;
     }
     out += '\n';
   } else {
     if (node.isLeafNode && node.handlers) {
-      out += ` [${formatMethods(Object.keys(node.handlers))}]\n`;
+      out += ` [${Object.keys(node.handlers).join(', ')}]\n`;
     } else out += '\n';
   }
 
@@ -58,19 +56,19 @@ export const prettyPrint = <T>(
   return out;
 };
 
-export const trimRegExpStartAndEnd = (regexString: string) => {
+export const trimRegExpStartAndEnd = (str: string) => {
   // Only remove ^ and $ if they are regex anchors, NOT part of character classes
   // ^ at position 0 (outside brackets) is an anchor
   // $ at last position (outside brackets) is an anchor
-  if (regexString.charCodeAt(0) === 94) {
+  if (str.charCodeAt(0) === 94) {
     // ^ at start (anchor)
-    regexString = regexString.slice(1);
+    str = str.slice(1);
   }
-  if (regexString.charCodeAt(regexString.length - 1) === 36) {
+  if (str.charCodeAt(str.length - 1) === 36) {
     // $ at end (anchor)
-    regexString = regexString.slice(0, -1);
+    str = str.slice(0, -1);
   }
-  return regexString;
+  return str;
 };
 
 export const getClosingBracePosition = (
@@ -90,6 +88,3 @@ export const getClosingBracePosition = (
   }
   throw new TypeError(`Invalid regex in "${path}"`);
 };
-
-const ESCAPE_REGEX = /[.*+?^${}()|[\]\\]/g;
-export const escapeRegExp = (str: string) => str.replace(ESCAPE_REGEX, '\\$&');

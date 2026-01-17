@@ -6,13 +6,7 @@ import {resolve, dirname} from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const benchmarks = [
-  'rou3.js',
-  'radix-tree.js',
-  'find-my-way.js',
-  'rou3-compiled.js',
-  'express.js',
-];
+const benchmarks = ['radix-tree.js', 'find-my-way.js'];
 
 const queue = new Queue();
 

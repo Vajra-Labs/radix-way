@@ -1,5 +1,5 @@
 import http from 'http';
-import {RadixTree} from './dist/index.js';
+import {RadixTree, type HandlerSet} from './dist/index.js';
 
 type Req = http.IncomingMessage;
 type Res = http.ServerResponse<http.IncomingMessage> & {
@@ -20,10 +20,16 @@ router.insert('GET', '/json', (_req, res) => {
 
 router.insert('POST', '/users/:id', (req, res) => {
   const result = router.match(req.method!, req.url!);
-  const [, paramMap, params] = result!;
-  const userId = params?.[paramMap?.id!];
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify({userId, name: `User ${userId}`}));
+  if (result && Array.isArray(result[0])) {
+    // Dynamic route - full tuple format
+    const [, paramMap, params] = result as HandlerSet<Handler>;
+    const userId = params?.[paramMap?.id];
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({userId, name: `User ${userId}`}));
+  } else {
+    // Static route - handler array format
+    res.end('Static route');
+  }
 });
 
 router.insert('ALL', '/*', (_req, res) => {
@@ -37,8 +43,16 @@ const app = http.createServer((req, res) => {
     res.end('Not Found');
     return;
   }
-  const [handlers] = result;
-  handlers?.[0]?.(req, res);
+
+  // Handle both static and dynamic routes
+  if (Array.isArray(result[0])) {
+    // Dynamic route - [handlers[], paramMap, params]
+    const [handlers] = result;
+    handlers[0](req, res);
+  } else {
+    // Static route - handlers[]
+    result[0](req, res);
+  }
 });
 
 app.listen(3000, () => {

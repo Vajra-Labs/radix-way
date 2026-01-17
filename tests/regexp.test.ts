@@ -86,10 +86,10 @@ describe('routeToRegExp', () => {
 
   it('should throw error for optional parameter not at end', () => {
     expect(() => routeToRegExp('/posts/:category?/:slug?')).toThrow(
-      'Optional parameter must be last in path',
+      'Optional parameters are not supported',
     );
     expect(() => routeToRegExp('/users/:id?/profile')).toThrow(
-      'Optional parameter must be last in path',
+      'Optional parameters are not supported',
     );
   });
 
